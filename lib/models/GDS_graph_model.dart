@@ -1,119 +1,125 @@
+import 'dart:ffi';
 import 'dart:math';
 
 extension MyFancyList<T> on List<T> {
   bool isInside(T elem) => where((element) => elem == element).isNotEmpty;
+
+  bool isNotInside(T elem) => where((element) => elem == element).isEmpty;
 }
 
 class GraphPipeline {
   List<PipelinePoint> points = [];
   Map<String, PipelineEdge> edges = {};
-  List<PipelinePoint> sourcePoints = []; //(S) источник потока
-  List<PipelinePoint> sinkPoints = []; //(T) сток потока
+
+  PipelinePoint? sourcePoint; //(S) источник потока
+  PipelinePoint? sinkPoint; //(T) сток потока
   void link(double x, double y, PipelinePoint fromPoint, PipelinePoint toPoint,
       int maxFlow) {
-    edges["${fromPoint.id}-${toPoint.id}"] =
-        PipelineEdge(x, y, fromPoint, toPoint, maxFlow);
-    fromPoint.childPoints.add(toPoint);
+    var newEdge = PipelineEdge(x, y, fromPoint, toPoint, maxFlow);
+    edges["${fromPoint.id}-${toPoint.id}"] = newEdge;
+
+    fromPoint.edgesFromPoint.add(newEdge);
+    toPoint.edgesToPoint.add(newEdge);
   }
 
-  bool _depthSearch(PipelinePoint point, List<PipelineEdge> way) {
-    bool wayIsExist = false;
-    if (sinkPoints.isInside(point)) {
-      //точка - сток
-      var minPossibleFlow = (double.maxFinite).toInt();
-      for (var element in way) {
-        if (element.possibleFlow < minPossibleFlow) {
-          minPossibleFlow = element.possibleFlow - element.flow;
+  int _lastId = 0;
+
+  int _generateId() {
+    _lastId += 1;
+    return _lastId;
+  }
+
+  void addPoint(
+      {bool isSource = false, double sourceFlow = 0, bool isSink = false}) {
+    var newPoint = PipelinePoint(_generateId());
+    if (isSource) {
+      newPoint.sourceFlow = sourceFlow;
+      newPoint.isSource = true;
+      sourcePoint = newPoint;
+    }
+    if (isSink) {
+      sinkPoint = newPoint;
+      newPoint.isSink = true;
+    }
+    points.add(newPoint);
+  }
+
+  void distributeFlow() {
+    ///
+    ///
+    /// Список ребер по которым уже нельзя пропустить новый поток.
+    List<PipelineEdge> lockEdges = [];
+
+    ///
+    ///
+    /// функция для получения ребер у точки, по для которых допустимо применить функцию распределения
+    List<PipelineEdge> _getAvailableEdgesForDistributeFlow(
+        PipelinePoint point) {
+      var resultList = <PipelineEdge>[];
+      for (PipelineEdge edge in point.edgesFromPoint) {
+        if ((edge.throughputFlow - edge.flow ).toInt()> 0 &&
+            lockEdges.isNotInside(edge)) {
+          resultList.add(edge);
         }
       }
-      for (var edges in way) {
-        edges.flow += minPossibleFlow;
-      }
-      return true;
-    } else {
-      for (var child in point.childPoints) {
-        List<PipelineEdge> newWay = [...way];
-        newWay.add(edges["${point.id}-${child.id}"]!);
-        wayIsExist = _depthSearch(child, newWay);
-      }
+      return resultList;
     }
-    return wayIsExist;
-  }
 
-  bool _rebalanceFlowDepthSearch(
-      PipelinePoint point, List<PipelineEdge> way, List<int> directions) {
-    bool wayIsExist = false;
-    if (sinkPoints.isInside(point)) {
+    ///
+    ///
+    /// Рекурсивная функция распределения потока.
+    double distributeFlowRecurrent(
+        PipelinePoint point, double flow, PipelineEdge? parentEdge) {
       ///
       ///
-      /// если точка - сток
-      var minDiffFlow = (double.maxFinite).toInt();
-      for (var edge in way) {
-        var diffFlow = edge.possibleFlow - edge.flow;
-        diffFlow = min(diffFlow, minDiffFlow);
-        if (diffFlow <= 0) {
-          throw Exception('Diff <=0');
-        }
-        for (int i = 0; i < way.length; i++) {
-          way[i].flow += minDiffFlow * directions[i];
-        }
-        return true;
+      /// для точки потребления:
+      if (point.isSink) {
+        parentEdge!.flow +=
+            flow;
+        point.flow += flow;
+        return 0;
       }
-    } else {
-      for (var child in point.childPoints) {
-        var edge = edges["${point.id}-${child.id}"]!;
-        if (!way.isInside(edge)) {
-          var diffFlow = edge.possibleFlow - edge.flow;
-          if (diffFlow != 0) {
-            List<PipelineEdge> newWay = [...way];
-            List<int> newDirections = [...directions, 1];
-            newWay.add(edges["${point.id}-${child.id}"]!);
-            bool wayIsExist =
-                _rebalanceFlowDepthSearch(child, newWay, newDirections);
-            if (wayIsExist) {
-              return wayIsExist;
-            }
-          }
-        } else {
-          continue;
-        }
-      }
-      for (var parent in point.parentPoints) {
-        var edge = edges["${parent.id}-${point.id}"]!;
-        if (!way.isInside(edge)) {
-          var divFlow = edge.possibleFlow - edge.flow;
-          if (divFlow != 0) {
-            List<PipelineEdge> newWay = [...way];
-            List<int> newDirections = [...directions, -1];
-            newWay.add(edges["${parent.id}-${point.id}"]!);
-            bool wayIsExist =
-                _rebalanceFlowDepthSearch(parent, newWay, directions);
-            if (wayIsExist) {
-              return wayIsExist;
-            }
-          }
-        } else {
-          continue;
-        }
-      }
-    }
-    return wayIsExist;
-  }
 
-  void flowFordFulkersonAlgorithm() {
-    ///первоначальная балансировка. Поиск вглубину.
-    bool balancingIsPossible = true;
-    while (balancingIsPossible) {
-      balancingIsPossible = _depthSearch(sourcePoints[0],
-          []); //todo для нескольких точек стока и истока нуждно объеденять, пока доступно только для одной выхода и одного входа
+      ///
+      ///
+      /// Для всех остальных точек:
+      double flowDebt = flow;
+      List<PipelineEdge> availableEdges =
+          _getAvailableEdgesForDistributeFlow(point);
+      bool canDistributeDebtFlow = availableEdges.isNotEmpty;
+      while (canDistributeDebtFlow) {
+        double n = availableEdges.length.toDouble();
+        double flowOptimal = flowDebt / n;
+        if(n==3){
+          print('object');
+        }
+        for (PipelineEdge edge in availableEdges) {
+          double forwardedFlow;
+          if (edge.throughputFlow - edge.flow >= flowOptimal) {
+            forwardedFlow = flowOptimal;
+          } else {
+            forwardedFlow = edge.throughputFlow - edge.flow;
+          }
+          double remainder =
+              distributeFlowRecurrent(edge.toPoint, forwardedFlow, edge);
+          flowDebt -= forwardedFlow - remainder;
+          if (remainder != 0) {
+            lockEdges.add(edge);
+          }
+        }
+        availableEdges = _getAvailableEdgesForDistributeFlow(point);
+        if (availableEdges.isEmpty || flowDebt.toInt() == 0) {
+          canDistributeDebtFlow = false;
+        }
+      }
+      if (parentEdge != null) {
+        //проверка на source точку
+        parentEdge.flow += flow - flowDebt;
+      }
+      point.flow += flow - flowDebt;
+      return flowDebt;
     }
-
-    bool rebalancingIsPossible = true;
-    while (rebalancingIsPossible) {
-      print("rebalancingIsPossible: ${rebalancingIsPossible}");
-      rebalancingIsPossible =
-          _rebalanceFlowDepthSearch(sourcePoints[0], [], []);
-    }
+    distributeFlowRecurrent(sourcePoint!, sourcePoint!.sourceFlow, null);
   }
 }
 
@@ -122,18 +128,23 @@ class PipelinePoint {
     this.id,
   );
 
-  List<PipelinePoint> childPoints = []; //есть ребро из this в childPoints
-  List<PipelinePoint> parentPoints = []; //есть ребро из parentPoints[i] в this
+  List<PipelineEdge> edgesFromPoint = []; //есть ребро из this в childPoints
+  List<PipelineEdge> edgesToPoint = []; //есть ребро из parentPoints[i] в this
   int id;
+  bool isSource = false;
+  double flow = 0;
+  double sourceFlow = 0; // производимое sourcePoint значение потока
+  bool isSink = false;
 }
 
 class PipelineEdge {
-  PipelineEdge(this.x, this.y, this.fromPoint, this.toPoint, this.possibleFlow);
+  PipelineEdge(
+      this.x, this.y, this.fromPoint, this.toPoint, this.throughputFlow);
 
   double x;
   double y;
   PipelinePoint fromPoint;
   PipelinePoint toPoint;
-  int possibleFlow;
-  int flow = 0;
+  int throughputFlow;
+  double flow = 0;
 }

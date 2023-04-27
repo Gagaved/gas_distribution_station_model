@@ -64,7 +64,7 @@ class PipelineElementWidget extends StatelessWidget {
             children: [
               Expanded(
                   child: Text(
-                "${edge.fromPoint.toString()}-${edge.toPoint.toString()}",
+                "${edge.fromPoint.id.toString()}-${edge.toPoint.id.toString()}",
                 style: const TextStyle(fontSize: 10),
               )),
               Expanded(
@@ -74,7 +74,7 @@ class PipelineElementWidget extends StatelessWidget {
               )),
               Expanded(
                   child: Text(
-                "pf: ${edge.possibleFlow}",
+                "etf: ${edge.throughputFlow}",
                 style: const TextStyle(fontSize: 10),
               )),
             ],

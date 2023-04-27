@@ -13,28 +13,27 @@ class GdsBloc extends Bloc<GdsEvent, GdsState> {
 
   GdsBloc() : super(GdsInitial()) {
     on<FloatingButtonPressGdsEvent>((event, emit) {
-      _graph!.flowFordFulkersonAlgorithm();
+      _graph!.distributeFlow();
       print('emit!');
       emit(GdsMainState(_graph!));
     });
 
     _graph = GraphPipeline();
-    _graph!.points.add(PipelinePoint(1),);
-    _graph!.points.add(PipelinePoint(2),);
-    _graph!.points.add(PipelinePoint(3),);
-    _graph!.points.add(PipelinePoint(4),);
-    _graph!.points.add(PipelinePoint(5),);
-    _graph!.points.add(PipelinePoint(6));
-
-    _graph!.sourcePoints.add(_graph!.points[0]);
-    _graph!.sinkPoints.add(_graph!.points[5]);
+    _graph!.addPoint(isSource: true,sourceFlow: 100);
+    _graph!.addPoint();
+    _graph!.addPoint();
+    _graph!.addPoint();
+    _graph!.addPoint();
+    //_graph!.addPoint();
+    _graph!.addPoint(isSink: true);
 
     _graph!.link(100, 0,_graph!.points[0],_graph!.points[1],100);
-    _graph!.link(100, 100,_graph!.points[1],_graph!.points[2],1000);
-    _graph!.link(50, 200,_graph!.points[1],_graph!.points[3],1000);
-    _graph!.link(150, 200,_graph!.points[2],_graph!.points[4],1000);
-    _graph!.link(100, 300,_graph!.points[3],_graph!.points[4],1000);
-    _graph!.link(100, 400,_graph!.points[4],_graph!.points[5],100);
+    _graph!.link(50, 100,_graph!.points[1],_graph!.points[2],1000);
+    _graph!.link(150, 100,_graph!.points[1],_graph!.points[3],1000);
+    _graph!.link(50, 200,_graph!.points[2],_graph!.points[4],1000);
+    _graph!.link(150, 200,_graph!.points[3],_graph!.points[4],1000);
+    _graph!.link(100, 300,_graph!.points[4],_graph!.points[5],100);
+    _graph!.link(250, 150,_graph!.points[1],_graph!.points[5],100);
     emit(GdsMainState(_graph!));
     }
 }
