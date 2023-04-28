@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gas_distribution_station_model/logic/gds_bloc.dart';
 import 'package:gas_distribution_station_model/models/GDS_graph_model.dart';
+import 'package:gas_distribution_station_model/presentation/gds_element.dart';
 
-List<PipelineElementWidget> createPipelineElementWidgetsList(
-    List<PipelineEdge> list) {
-  List<PipelineElementWidget> newList = [];
+
+List<Widget> createPipelineElementWidgetsList(List<GraphEdge> list) {
+  List<Widget> newList = [];
   for (var element in list) {
-    newList.add(PipelineElementWidget(element));
+    newList.add(PipelineSegmentWidget(p1: element.p1!,p2: element.p2!,));
   }
   return newList;
 }
@@ -18,9 +19,9 @@ class GdsScreenWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print("BUILD GOVNO");
-    return BlocProvider<GdsBloc>(
-        create: (context) => GdsBloc(),
-        child: BlocBuilder<GdsBloc, GdsState>(
+    return BlocProvider<GdsPageBloc>(
+        create: (context) => GdsPageBloc(),
+        child: BlocBuilder<GdsPageBloc, GdsState>(
           builder: (context, state) {
             if (state is GdsInitial) {
               return const CircularProgressIndicator();
@@ -31,7 +32,9 @@ class GdsScreenWidget extends StatelessWidget {
               return Scaffold(
                 floatingActionButton: FloatingActionButton(
                   onPressed: () {
-                    context.read<GdsBloc>().add(FloatingButtonPressGdsEvent());
+                    context
+                        .read<GdsPageBloc>()
+                        .add(FloatingButtonPressGdsEvent());
                   },
                 ),
                 body: Stack(
@@ -42,45 +45,5 @@ class GdsScreenWidget extends StatelessWidget {
             }
           },
         ));
-  }
-}
-
-class PipelineElementWidget extends StatelessWidget {
-  PipelineEdge edge;
-
-  PipelineElementWidget(this.edge, {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: edge.x,
-      top: edge.y,
-      child: Container(
-        width: 70,
-        height: 70,
-        color: Colors.black12,
-        child: Center(
-          child: Column(
-            children: [
-              Expanded(
-                  child: Text(
-                "${edge.fromPoint.id.toString()}-${edge.toPoint.id.toString()}",
-                style: const TextStyle(fontSize: 10),
-              )),
-              Expanded(
-                  child: Text(
-                "f: ${edge.flow}",
-                style: const TextStyle(fontSize: 10),
-              )),
-              Expanded(
-                  child: Text(
-                "etf: ${edge.throughputFlow}",
-                style: const TextStyle(fontSize: 10),
-              )),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

@@ -1,6 +1,5 @@
 import 'dart:ffi';
 import 'dart:math';
-import 'dart:ui';
 
 extension MyFancyList<T> on List<T> {
   bool isInside(T elem) => where((element) => elem == element).isNotEmpty;
@@ -9,14 +8,14 @@ extension MyFancyList<T> on List<T> {
 }
 
 class GraphPipeline {
-  List<GraphPoint> points = [];
-  Map<String, GraphEdge> edges = {};
+  List<PipelinePoint> points = [];
+  Map<String, PipelineEdge> edges = {};
 
-  GraphPoint? sourcePoint; //(S) источник потока
-  GraphPoint? sinkPoint; //(T) сток потока
-  void link(Offset p1, Offset p2, GraphPoint fromPoint, GraphPoint toPoint,
+  PipelinePoint? sourcePoint; //(S) источник потока
+  PipelinePoint? sinkPoint; //(T) сток потока
+  void link(double x, double y, PipelinePoint fromPoint, PipelinePoint toPoint,
       int maxFlow) {
-    var newEdge = GraphEdge(fromPoint, toPoint, maxFlow,p1,p2);
+    var newEdge = PipelineEdge(x, y, fromPoint, toPoint, maxFlow);
     edges["${fromPoint.id}-${toPoint.id}"] = newEdge;
 
     fromPoint.edgesFromPoint.add(newEdge);
@@ -32,7 +31,7 @@ class GraphPipeline {
 
   void addPoint(
       {bool isSource = false, double sourceFlow = 0, bool isSink = false}) {
-    var newPoint = GraphPoint(_generateId());
+    var newPoint = PipelinePoint(_generateId());
     if (isSource) {
       newPoint.sourceFlow = sourceFlow;
       newPoint.isSource = true;
@@ -49,15 +48,15 @@ class GraphPipeline {
     ///
     ///
     /// Список ребер по которым уже нельзя пропустить новый поток.
-    List<GraphEdge> lockEdges = [];
+    List<PipelineEdge> lockEdges = [];
 
     ///
     ///
     /// функция для получения ребер у точки, по для которых допустимо применить функцию распределения
-    List<GraphEdge> _getAvailableEdgesForDistributeFlow(
-        GraphPoint point) {
-      var resultList = <GraphEdge>[];
-      for (GraphEdge edge in point.edgesFromPoint) {
+    List<PipelineEdge> _getAvailableEdgesForDistributeFlow(
+        PipelinePoint point) {
+      var resultList = <PipelineEdge>[];
+      for (PipelineEdge edge in point.edgesFromPoint) {
         if ((edge.throughputFlow - edge.flow ).toInt()> 0 &&
             lockEdges.isNotInside(edge)) {
           resultList.add(edge);
@@ -70,7 +69,7 @@ class GraphPipeline {
     ///
     /// Рекурсивная функция распределения потока.
     double distributeFlowRecurrent(
-        GraphPoint point, double flow, GraphEdge? parentEdge) {
+        PipelinePoint point, double flow, PipelineEdge? parentEdge) {
       ///
       ///
       /// для точки потребления:
@@ -85,16 +84,13 @@ class GraphPipeline {
       ///
       /// Для всех остальных точек:
       double flowDebt = flow;
-      List<GraphEdge> availableEdges =
-          _getAvailableEdgesForDistributeFlow(point);
+      List<PipelineEdge> availableEdges =
+      _getAvailableEdgesForDistributeFlow(point);
       bool canDistributeDebtFlow = availableEdges.isNotEmpty;
       while (canDistributeDebtFlow) {
         double n = availableEdges.length.toDouble();
         double flowOptimal = flowDebt / n;
-        if(n==3){
-          print('object');
-        }
-        for (GraphEdge edge in availableEdges) {
+        for (PipelineEdge edge in availableEdges) {
           double forwardedFlow;
           if (edge.throughputFlow - edge.flow >= flowOptimal) {
             forwardedFlow = flowOptimal;
@@ -102,7 +98,7 @@ class GraphPipeline {
             forwardedFlow = edge.throughputFlow - edge.flow;
           }
           double remainder =
-              distributeFlowRecurrent(edge.toPoint, forwardedFlow, edge);
+          distributeFlowRecurrent(edge.toPoint, forwardedFlow, edge);
           flowDebt -= forwardedFlow - remainder;
           if (remainder != 0) {
             lockEdges.add(edge);
@@ -124,13 +120,13 @@ class GraphPipeline {
   }
 }
 
-class GraphPoint {
-  GraphPoint(
-    this.id,
-  );
+class PipelinePoint {
+  PipelinePoint(
+      this.id,
+      );
 
-  List<GraphEdge> edgesFromPoint = []; //есть ребро из this в childPoints
-  List<GraphEdge> edgesToPoint = []; //есть ребро из parentPoints[i] в this
+  List<PipelineEdge> edgesFromPoint = []; //есть ребро из this в childPoints
+  List<PipelineEdge> edgesToPoint = []; //есть ребро из parentPoints[i] в this
   int id;
   bool isSource = false;
   double flow = 0;
@@ -138,13 +134,14 @@ class GraphPoint {
   bool isSink = false;
 }
 
-class GraphEdge {
-  GraphEdge(
-      this.fromPoint, this.toPoint, this.throughputFlow,this.p1,this.p2);
-  GraphPoint fromPoint;
-  GraphPoint toPoint;
+class PipelineEdge {
+  PipelineEdge(
+      this.x, this.y, this.fromPoint, this.toPoint, this.throughputFlow);
+
+  double x;
+  double y;
+  PipelinePoint fromPoint;
+  PipelinePoint toPoint;
   int throughputFlow;
   double flow = 0;
-  Offset? p1;
-  Offset? p2;
 }
