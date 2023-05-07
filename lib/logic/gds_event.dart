@@ -3,15 +3,28 @@ part of 'gds_bloc.dart';
 @immutable
 abstract class GdsEvent {}
 
-class FloatingButtonPressGdsEvent extends GdsEvent {}
+class AddEdgeButtonPressGdsEvent extends GdsEvent {
+  final double throughputFlow;
+  AddEdgeButtonPressGdsEvent(this.throughputFlow);}
 
 class GdsElementMoveEvent extends GdsEvent {
   final int id;
-  final double newPositionX;
-  final double newPositionY;
+  final Offset p1;
+  final Offset p2;
 
-  GdsElementMoveEvent(this.id, this.newPositionY, this.newPositionX);
+  GdsElementMoveEvent(this.id, this.p1,this.p2);
 }
+
+class GdsPointMoveEvent extends GdsEvent {
+  final int pointId;
+  final Offset delta;
+
+  GdsPointMoveEvent(this.pointId, this.delta);
+}
+class CalculateFlowButtonPressGdsEvent extends GdsEvent{
+
+}
+
 
 class GdsElementChangeSizeEvent extends GdsEvent {
   final int id;
@@ -23,10 +36,10 @@ class GdsElementChangeSizeEvent extends GdsEvent {
 }
 
 class GdsSelectElementEvent extends GdsEvent {
-  final int id;
+  final GraphEdge element;
 
   GdsSelectElementEvent(
-    this.id,
+    this.element,
   );
 }
 

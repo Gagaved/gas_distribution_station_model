@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:gas_distribution_station_model/logic/gds_bloc.dart';
+import 'package:gas_distribution_station_model/models/GDS_graph_model.dart';
 import 'package:gas_distribution_station_model/presentation/styles.dart';
 
 double _getAngle(Offset p1, Offset p2) {
@@ -10,98 +11,165 @@ double _getAngle(Offset p1, Offset p2) {
   double x2 = p2.dx - min(p1.dx, p2.dx);
   double y2 = p2.dy - min(p1.dy, p2.dy);
   double k = (y2 - y1) / (x2 - x1);
-  print("x1:${x1}\n y1:${y1}");
-  print("x2:${x2}\n y2:${y2}");
   double result = pi - atan2(x2 - x1, y2 - y1);
-  print(k);
-  print("angle:${result}");
+  if ((x2 - x1).abs() > (y2 - y1).abs()) {
+    //result+=pi/2;
+  }
   return result;
 }
 
 class PipelineSegmentWidget extends StatelessWidget {
-  final int id;
-  final Offset p1;
-  final Offset p2;
+  final GraphEdge edge;
+  final bool isSelect;
 
-  PipelineSegmentWidget({required this.id, required this.p1, required this.p2, super.key});
+  PipelineSegmentWidget(
+      {required this.edge, super.key, required this.isSelect});
 
   @override
   Widget build(BuildContext context) {
+    int id = edge.id;
+    Offset p1 = edge.p1.position;
+    Offset p2 = edge.p2.position;
     double dragPointSize = 10.0;
+    double additionalSize = 50;
+    double width = (p2.dx - p1.dx).abs() + additionalSize;
+    double height = (p2.dy - p1.dy).abs() + additionalSize;
     double angle = _getAngle(p1, p2);
+    double len = _getLen(p1, p2);
+
     return Positioned(
       top: min(p1.dy, p2.dy) - (dragPointSize),
       left: min(p1.dx, p2.dx) - (dragPointSize),
-      child: Container(
-        width: (p2.dx - p1.dx).abs() + dragPointSize * 2,
-        height: (p2.dy - p1.dy).abs() + dragPointSize * 2,
-        color: Colors.black12,
-        child: Stack(
-          children: [
-            ///
-            ///
-            /// Пейнтер линии
-            CustomPaint(
-                painter: _MyLinePainter(
-              Offset(
-                p1.dx - min(p1.dx, p2.dx) + dragPointSize,
-                p1.dy - min(p1.dy, p2.dy) + dragPointSize,
-              ),
-              Offset(p2.dx - min(p1.dx, p2.dx) + dragPointSize,
-                  p2.dy - min(p1.dy, p2.dy) + dragPointSize),
-            )),
+      child: Stack(children: [
+        Positioned(
+          child: Text(
+            "flow:${edge.flow.toStringAsFixed(2)}",
+            style: TextStyle(fontSize: isSelect ? 25 : 10),
+          ),
+          right: 0,
+          top: additionalSize / 2,
+        ),
+        Container(
+          width: width + dragPointSize * 2,
+          height: height + dragPointSize * 2,
+          color: isSelect ? Colors.black12 : null,
+          child: Stack(
+            children: [
+              ///
+              ///
+              /// Пейнтер линии
+              CustomPaint(
+                  painter: _MyLinePainter(
+                Offset(
+                  p1.dx - min(p1.dx, p2.dx) + dragPointSize,
+                  p1.dy - min(p1.dy, p2.dy) + dragPointSize,
+                ),
+                Offset(p2.dx - min(p1.dx, p2.dx) + dragPointSize,
+                    p2.dy - min(p1.dy, p2.dy) + dragPointSize),
+              )),
 
-            ///
-            ///
-            /// первая точке
-            Positioned(
-              left: p1.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
-              top: p1.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
-              child: Container(
-                width: dragPointSize,
-                height: dragPointSize,
-                color: AdditionalColors.planBorderElementTranslucent,
-              ),
-            ),
-
-            ///
-            ///
-            /// вторая точке
-            Positioned(
-              left: p2.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
-              top: p2.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
-              child: Container(
-                width: dragPointSize,
-                height: dragPointSize,
-                color: AdditionalColors.planBorderElementTranslucent,
-              ),
-            ),
-
-            ///
-            ///
-            /// Контейнер для детектора
-            Transform.rotate(
-              angle: angle,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 15.0),
-                  child: GestureDetector(
-                    onTap: (){
-                      context.read<GdsPageBloc>().add(GdsSelectElementEvent(id));
-                    },
-                    child: Container(
-                      width: 10,
-                      color: AdditionalColors.debugTranslucent,
-                    ),
+              ///
+              ///
+              /// первая точке
+              Positioned(
+                left: p1.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
+                top: p1.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsPointMoveEvent(edge.p1.id, d.delta));
+                    }
+                  },
+                  child: Container(
+                    width: dragPointSize,
+                    height: dragPointSize,
+                    color: isSelect?AdditionalColors.planBorderElementTranslucent:null,
                   ),
                 ),
               ),
-            )
-          ],
+
+              ///
+              ///
+              /// вторая точке
+              Positioned(
+                left: p2.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
+                top: p2.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsPointMoveEvent(edge.p2.id, d.delta));
+                    }
+                  },
+                  child: Container(
+                    width: dragPointSize,
+                    height: dragPointSize,
+                    color: isSelect?AdditionalColors.planBorderElementTranslucent:null,
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// Контейнер для детектора
+              Container(
+                width: width + dragPointSize * 2 - additionalSize,
+                height: height + dragPointSize * 2 - additionalSize,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsElementMoveEvent(id, d.delta, d.delta));
+                    }
+                  },
+                  child: RotatedBox(
+                    quarterTurns: width > height ? 1 : 0,
+                    child: Transform.rotate(
+                      angle: width > height ? angle - pi / 2 : angle, //
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 15.0),
+                          child: Container(
+                            width: 10,
+                            color: isSelect?AdditionalColors.debugTranslucent:Colors.black26,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
         ),
-      ),
+      ]),
     );
   }
+}
+
+double _getLen(Offset p1, Offset p2) {
+  double width = (p2.dx - p1.dx).abs();
+  double height = (p2.dy - p1.dy).abs();
+  return sqrt(width * width + height * height);
 }
 
 // class PipelineValveWidget extends StatelessWidget {
@@ -196,12 +264,6 @@ class _MyLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    print("---");
-    print(p1.dx);
-    print(p1.dy);
-    print(p2.dx);
-    print(p2.dy);
-    print("---");
     final paint = Paint()..color = Colors.red;
     paint.strokeWidth = 5;
     canvas.drawLine(p1, p2, paint);

@@ -11,31 +11,79 @@ part 'gds_event.dart';
 part 'gds_state.dart';
 
 class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
-  GraphPipeline? _graph;
-  GraphEdge? selectedElement;
+  GraphPipeline? graph;
+  GraphEdge? _selectedElement;
+  Map<Offset, List<GraphPoint>> magneticGrid = {};
+
+  GraphPoint? _mag(GraphPoint point) {
+    double MAGNETIC_RANGE = 1;
+    for (GraphPoint otherPoint in graph!.points.values.toList()) {
+      if (point != otherPoint &&
+          (point.position.dx - otherPoint.position.dx).abs() <=
+              MAGNETIC_RANGE &&
+          (point.position.dy - otherPoint.position.dy).abs() <=
+              MAGNETIC_RANGE) {
+        point.position = otherPoint.position;
+        graph!.mergePoints(point, otherPoint);
+        return otherPoint;
+      }
+    }
+  }
+
   GdsPageBloc() : super(GdsInitial()) {
-    on<FloatingButtonPressGdsEvent>((event, emit) {
-      _graph!.distributeFlow();
-      print('emit!');
-      emit(GdsMainState(_graph!));
+    on<AddEdgeButtonPressGdsEvent>((event, emit) {
+      _addNewEdge(event.throughputFlow);
+      emit(GdsMainState(graph!, _selectedElement));
+    });
+    on<CalculateFlowButtonPressGdsEvent>((event, emit) {
+      graph!.distributeFlow();
+      emit(GdsMainState(graph!, _selectedElement));
+    });
+    on<GdsSelectElementEvent>((event, emit) {
+      if (_selectedElement == event.element)
+        _selectedElement = null;
+      else {
+        _selectedElement = event.element;
+      }
+      emit(GdsMainState(graph!, _selectedElement));
+    });
+    on<GdsDeselectElementEvent>((event, emit) {
+      _selectedElement = null;
+      emit(GdsMainState(graph!, _selectedElement));
+    });
+    on<GdsElementMoveEvent>((event, emit) {
+      _selectedElement!.p1.position += event
+          .p1; //Offset(_selectedElement!.p1.dx+event.p1.dx,_selectedElement!.p1.dy+event.p1.dy);
+      _selectedElement!.p2.position += event
+          .p2; // Offset(_selectedElement!.p2.dx+event.p2.dx,_selectedElement!.p2.dy+event.p2.dy);
+      emit(GdsMainState(graph!, _selectedElement));
+    });
+    on<GdsPointMoveEvent>((event, emit) {
+      GraphPoint p = graph!.points[event.pointId]!;
+      p.position += event.delta;
+      GraphPoint? otherPoint = _mag(p);
+      otherPoint != null ? graph!.mergePoints(p, otherPoint) : 0;
+      emit(GdsMainState(graph!, _selectedElement));
     });
 
-    _graph = GraphPipeline();
-    _graph!.addPoint(isSource: true,sourceFlow: 100);
-    _graph!.addPoint();
-    _graph!.addPoint();
-    _graph!.addPoint();
-    _graph!.addPoint();
+    graph = GraphPipeline();
+    graph!.addPoint(
+        isSource: true, sourceFlow: 100, position: const Offset(100, 0));
+    graph!.addPoint(position: Offset(100, 100));
+    graph!.addPoint(position: Offset(100, 200));
     //_graph!.addPoint();
-    _graph!.addPoint(isSink: true);
+    graph!.addPoint(isSink: true, position: Offset(100, 300));
 
-    _graph!.link(const Offset(100,0), const Offset(100, 100),_graph!.points[0],_graph!.points[1],100);
-    _graph!.link(const Offset(100,100), const Offset(25, 200),_graph!.points[1],_graph!.points[2],1000);
-    _graph!.link(const Offset(100,100), const Offset(175, 200),_graph!.points[1],_graph!.points[3],1000);
-    _graph!.link(const Offset(25, 200), const Offset(100, 300),_graph!.points[2],_graph!.points[4],1000);
-    _graph!.link(const Offset(175, 200), const Offset(100, 300),_graph!.points[3],_graph!.points[4],1000);
-    _graph!.link(const Offset(100, 300), const Offset(100, 400),_graph!.points[4],_graph!.points[5],100);
-    emit(GdsMainState(_graph!));
-    }
+    graph!.link(graph!.points[1]!, graph!.points[2]!, 100);
+    graph!.link(graph!.points[2]!, graph!.points[3]!, 100);
+    graph!.link(graph!.points[3]!, graph!.points[4]!, 100);
+
+    emit(GdsMainState(graph!, _selectedElement));
+  }
+
+  void _addNewEdge(double throughputFlow) {
+    var p1 = graph!.addPoint(position: Offset(300, 300));
+    var p2 = graph!.addPoint(position: Offset(300, 400));
+    graph!.link(p1, p2, throughputFlow);
+  }
 }
-
