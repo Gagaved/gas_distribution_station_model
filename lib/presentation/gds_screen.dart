@@ -2,15 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gas_distribution_station_model/logic/gds_bloc.dart';
 import 'package:gas_distribution_station_model/models/GDS_graph_model.dart';
+import 'package:gas_distribution_station_model/models/gds_element_type.dart';
 import 'package:gas_distribution_station_model/presentation/gds_element.dart';
-
-List<Widget> createPipelineElementWidgetsList(List<GraphEdge> list) {
-  List<Widget> newList = [];
-  for (var edge in list) {
-    newList.add(PipelineSegmentWidget(edge: edge, isSelect: false));
-  }
-  return newList;
-}
 
 class GdsScreenWidget extends StatelessWidget {
   const GdsScreenWidget({super.key});
@@ -29,13 +22,15 @@ class GdsScreenWidget extends StatelessWidget {
               var edgesMap = (state).graph.edges;
               for (GraphEdge edge in edgesMap.values) {
                 if (edge != state.selectedEdge) {
-                  listOfElements
-                      .add(PipelineSegmentWidget(edge: edge, isSelect: false));
+                  listOfElements.add(getWidgetFromEdge(edge, isSelect: false));
                 }
               }
               if (state.selectedEdge != null) {
-                listOfElements
-                    .add(PipelineSegmentWidget(edge: state.selectedEdge!, isSelect: true));
+                listOfElements.add(
+                    getWidgetFromEdge(state.selectedEdge!, isSelect: true));
+                listOfElements.add(PipelineFloatingInformationCardWidget(
+                  edge: state.selectedEdge!,
+                ));
               }
               return Scaffold(
                   floatingActionButton: Column(
@@ -52,7 +47,7 @@ class GdsScreenWidget extends StatelessWidget {
                     ],
                   ),
                   body: Stack(children: [
-                    const PipelineParamsWidget(),
+                    const PipelinePanelWidget(),
                     Stack(children: listOfElements),
                   ]));
             } else {
@@ -63,58 +58,117 @@ class GdsScreenWidget extends StatelessWidget {
   }
 }
 
-class PipelineParamsWidget extends StatelessWidget {
-  const PipelineParamsWidget({Key? key}) : super(key: key);
-  static TextEditingController flowFieldController = TextEditingController();
+Widget getWidgetFromEdge(GraphEdge edge, {required bool isSelect}) {
+  switch (edge.type) {
+    case GdsElementType.valve:
+      return PipelineValveWidget(edge: edge, isSelect: isSelect);
+    case GdsElementType.segment:
+      return PipelineSegmentWidget(edge: edge, isSelect: isSelect);
+    default:
+      return PipelineSegmentWidget(edge: edge, isSelect: isSelect);
+  }
+}
 
+class PipelinePanelWidget extends StatelessWidget {
+  const PipelinePanelWidget({Key? key}) : super(key: key);
+  static final TextEditingController _flowFieldController = TextEditingController();
+  static final ScrollController _scrollController = ScrollController();
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<GdsPageBloc, GdsState>(
       builder: (context, state) {
         if (state is GdsMainState) {
           if (state.selectedEdge != null) {
-            flowFieldController.text =
+            _flowFieldController.text =
                 state.selectedEdge!.throughputFlow.toString();
-          } else {
-            flowFieldController.text = '';
           }
-        }
-        return Positioned(
-          left: 5,
-          bottom: 5,
-          child: Card(
-            elevation: 5,
-            child: SizedBox(
-              width: 150,
-              child: Column(
-                children: [
-                  TextField(
-                    keyboardType: TextInputType.number,
-                    controller: flowFieldController,
-                    decoration: const InputDecoration(
-                      labelText: 'макс. поток',
-                      border: OutlineInputBorder(),
+          var edgeTypes = GdsElementType.values;
+          return Positioned(
+            left: 5,
+            bottom: 5,
+            child: Card(
+              elevation: 5,
+              child: SizedBox(
+                width: 150,
+                height: 200,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Scrollbar(
+                         controller: _scrollController,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          itemCount: edgeTypes.length,
+                          scrollDirection: Axis.horizontal,
+                          itemBuilder: (BuildContext con, int index) {
+                            return GestureDetector(
+                                onTap: () {
+                                  context.read<GdsPageBloc>().add(
+                                      ChangeSelectedTypeInPanelEvent(
+                                          edgeTypes[index]));
+                                },
+                                child: Container(
+                                  height: 300,
+                                  padding: const EdgeInsets.all(5.0),
+                                  child: Card(
+                                    elevation: 5,
+                                    color: state.selectedType == edgeTypes[index]
+                                        ? Colors.blue
+                                        : null,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(3.0),
+                                      child: Center(child: Text(edgeTypes[index].name)),
+                                    ),
+                                  ),
+                                ));
+                          },
+                        ),
+                      ),
                     ),
-                  ),
-                  Padding(
-                      padding: EdgeInsets.all(10),
-                      child: MaterialButton(
-                        onPressed: () {
-                          context.read<GdsPageBloc>().add(
-                              AddEdgeButtonPressGdsEvent(
-                                  double.parse(flowFieldController.text)));
-                        },
-                        child: Text('Добавить ребро'),
-                        color: Colors.blue,
-                      ))
+                    TextField(
+                      keyboardType: TextInputType.number,
+                      controller: _flowFieldController,
+                      decoration: const InputDecoration(
+                        labelText: 'макс. поток',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    state.selectedEdge == null
+                        ? Padding(
+                            padding: EdgeInsets.all(10),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                context.read<GdsPageBloc>().add(
+                                    AddElementButtonPressGdsEvent(double.parse(
+                                        _flowFieldController.text)));
+                              },
+                              child: Text('Добавить ${state.selectedType}'),
+                            ))
+                        : const SizedBox.shrink(),
+                    state.selectedEdge != null
+                        ? Padding(
+                            padding: EdgeInsets.all(10),
+                            child: MaterialButton(
+                              onPressed: () {
+                                context
+                                    .read<GdsPageBloc>()
+                                    .add(DeleteElementButtonPressGdsEvent());
+                              },
+                              child: Text('Удалить'),
+                              color: Colors.red,
+                            ))
+                        : const SizedBox.shrink(),
 
-                  //const TextField(),
-                  //const TextField(),
-                ],
+                    //const TextField(),
+                    //const TextField(),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
+          );
+        } else {
+          return CircularProgressIndicator();
+        }
       },
     );
   }

@@ -3,9 +3,18 @@ part of 'gds_bloc.dart';
 @immutable
 abstract class GdsEvent {}
 
-class AddEdgeButtonPressGdsEvent extends GdsEvent {
+class AddElementButtonPressGdsEvent extends GdsEvent {
   final double throughputFlow;
-  AddEdgeButtonPressGdsEvent(this.throughputFlow);}
+  AddElementButtonPressGdsEvent(this.throughputFlow);}
+
+class DeleteElementButtonPressGdsEvent extends GdsEvent {
+  DeleteElementButtonPressGdsEvent();}
+
+class ChangeSelectedTypeInPanelEvent extends GdsEvent{
+  final GdsElementType type;
+
+  ChangeSelectedTypeInPanelEvent(this.type);
+}
 
 class GdsElementMoveEvent extends GdsEvent {
   final int id;
@@ -42,6 +51,19 @@ class GdsSelectElementEvent extends GdsEvent {
     this.element,
   );
 }
+class GdsThroughputFLowPercentageElementChangeEvent extends GdsEvent{
+  final GraphEdge element;
+  final double value;
+  GdsThroughputFLowPercentageElementChangeEvent(this.element,this.value);
+
+}
+
+class GdsSourceFLowElementChangeEvent extends GdsEvent{
+  final GraphEdge element;
+  final double value;
+  GdsSourceFLowElementChangeEvent(this.element,this.value);
+
+}
 
 class GdsDeselectElementEvent extends GdsEvent {}
 
@@ -52,5 +74,3 @@ class GdsCreateElementEvent extends GdsEvent {
 }
 
 class GdsForceUpdateEvent extends GdsEvent {}
-
-class GdsDeleteWorkspaceButtonPressEvent extends GdsEvent {}

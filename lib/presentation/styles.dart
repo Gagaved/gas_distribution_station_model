@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AdditionalColors {
-  static Color primalTranslucent = const Color.fromARGB(228, 255, 105, 0);
+  static Color planBorderElement = const Color.fromARGB(255, 194, 72, 255);
   static Color planBorderElementTranslucent = const Color.fromARGB(
-      155, 0, 104, 255);
+      155, 101, 0, 185);
   static Color debugTranslucent = const Color.fromARGB(116, 237, 0, 255);
   static Color lightGray = const Color.fromARGB(
       255, 245, 245, 245);

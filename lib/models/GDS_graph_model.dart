@@ -2,6 +2,8 @@ import 'dart:ffi';
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:gas_distribution_station_model/models/gds_element_type.dart';
+
 extension MyFancyList<T> on List<T> {
   bool isInside(T elem) => where((element) => elem == element).isNotEmpty;
 
@@ -11,8 +13,7 @@ extension MyFancyList<T> on List<T> {
 class GraphPipeline {
   Map<int, GraphPoint> points = {};
   Map<String, GraphEdge> edges = {};
-  GraphPoint? sourcePoint; //(S) источник потока
-  GraphPoint? sinkPoint; //(T) сток потока
+
   GraphEdge? getEdgeBy2Points(GraphPoint p1, GraphPoint p2) {
     String key = "${min(p1.id, p2.id)}-${max(p1.id, p2.id)}";
     return edges[key];
@@ -58,8 +59,8 @@ class GraphPipeline {
   ///
   ///
   /// done
-  void link(GraphPoint p1, GraphPoint p2, double maxFlow) {
-    var newEdge = GraphEdge(maxFlow, p1, p2);
+  void link(GraphPoint p1, GraphPoint p2, double maxFlow, GdsElementType type) {
+    var newEdge = GraphEdge(maxFlow, p1, p2, type);
     String key = "${min(p1.id, p2.id)}-${max(p1.id, p2.id)}";
     if (p1.points.isNotInside(p2)) {
       p1.points.add(p2);
@@ -81,7 +82,7 @@ class GraphPipeline {
     for (var p in basePoints) {
       if (targetPoint.points.isNotInside(p)) {
         GraphEdge oldEdge = getEdgeBy2Points(basePoint, p)!;
-        link(targetPoint, p, oldEdge.throughputFlow);
+        link(targetPoint, p, oldEdge.throughputFlow, oldEdge.type);
         removeEdgeBy2Points(basePoint, p);
       }
     }
@@ -93,20 +94,8 @@ class GraphPipeline {
   ///
   /// Добавляет новую вершину в граф
   GraphPoint addPoint(
-      {bool isSource = false,
-      double sourceFlow = 0,
-      bool isSink = false,
-      required Offset position}) {
+      {double sourceFlow = 0, bool isSink = false, required Offset position}) {
     var newPoint = GraphPoint(position);
-    if (isSource) {
-      newPoint.sourceFlow = sourceFlow;
-      newPoint.isSource = true;
-      sourcePoint = newPoint;
-    }
-    if (isSink) {
-      sinkPoint = newPoint;
-      newPoint.isSink = true;
-    }
     points[newPoint.id] = newPoint;
     return newPoint;
   }
@@ -115,10 +104,14 @@ class GraphPipeline {
   ///
   /// done?
   void distributeFlow() {
+    GraphEdge? sourceEdge;
     for (var point in points.values) {
       point.flow = 0;
     }
     for (var edge in edges.values) {
+      if (edge.type == GdsElementType.source){
+        sourceEdge = edge;
+      }
       edge.flow = 0;
     }
 
@@ -135,6 +128,7 @@ class GraphPipeline {
             lockEdges.isNotInside(edge)) {
           resultList.add(destinationPoint);
         }
+        //resultList.add(destinationPoint);
       }
       return resultList;
     }
@@ -144,14 +138,17 @@ class GraphPipeline {
     /// done?
     double distributeFlowRecurrent(
         GraphPoint point, double flow, List<GraphPoint> way) {
+      GraphEdge? lastEdge =
+          way.isNotEmpty ? getEdgeBy2Points(point, way.last)! : null;
+
       ///проверка на посещеную вершину (избегаем случая прохода по вершине несколько раз)
       if (way.isInside(point)) {
         return flow;
       }
 
       /// для точки потребления:
-      if (point.isSink) {
-        getEdgeBy2Points(point, way.last)!.flow += flow;
+      if (lastEdge != null && lastEdge.type == GdsElementType.sink) {
+        lastEdge.flow += flow;
         point.flow += flow;
         return 0;
       }
@@ -163,23 +160,26 @@ class GraphPipeline {
           _getAvailableDestinationsForDistributeFlow(point, way, lockEdges);
       bool canDistributeDebtFlow = availableDestinations.isNotEmpty;
       while (canDistributeDebtFlow) {
+        double oldFlowDebt = flowDebt;
         double n = availableDestinations.length.toDouble();
-        //double flowOptimal = flowDebt / n;
-        for (GraphPoint desitonation in availableDestinations) {
+        double sumThroughputFlow = 0;
+        for (var destination in availableDestinations) {
+          var edge = getEdgeBy2Points(point, destination);
+          sumThroughputFlow += edge!.throughputFlow;
+        }
+        for (GraphPoint destination in availableDestinations) {
           double forwardedFlow;
-          GraphEdge edge = getEdgeBy2Points(point, desitonation)!;
+          GraphEdge edge = getEdgeBy2Points(point, destination)!;
+          forwardedFlow =
+              oldFlowDebt * (edge.throughputFlow / sumThroughputFlow);
 
           ///
           if (edge.flowDirection == point) {
-            if (edge.throughputFlow + edge.flow >= flowOptimal) {
-              forwardedFlow = flowDebt * edge.throughputFlow/sumThroughputFlow;
-            } else {
+            if (edge.throughputFlow + edge.flow < forwardedFlow) {
               forwardedFlow = edge.throughputFlow + edge.flow;
             }
           } else {
-            if (edge.throughputFlow - edge.flow >= flowOptimal) {
-              forwardedFlow = flowOptimal;
-            } else {
+            if (edge.throughputFlow - edge.flow < forwardedFlow) {
               forwardedFlow = edge.throughputFlow - edge.flow;
             }
           }
@@ -190,7 +190,7 @@ class GraphPipeline {
             ..addAll(way)
             ..add(point);
           double remainder =
-              distributeFlowRecurrent(desitonation, forwardedFlow, newWay);
+              distributeFlowRecurrent(destination, forwardedFlow, newWay);
           flowDebt -= forwardedFlow - remainder;
           if (remainder != 0) {
             lockEdges.add(edge);
@@ -203,9 +203,10 @@ class GraphPipeline {
         }
       }
       point.flow += flow - flowDebt;
-      if (!point.isSource) {
-        GraphEdge lastEdge = getEdgeBy2Points(point, way.last)!;
-        if (lastEdge.flowDirection == point ||lastEdge.flowDirection==null) {
+      if (lastEdge != null ){
+        //&& lastEdge.type != GdsElementType.source) {
+        if (lastEdge.flowDirection == point ||
+            lastEdge.flowDirection == null) {
           lastEdge.flow += flow - flowDebt;
           lastEdge.flowDirection = point;
         } else {
@@ -219,7 +220,7 @@ class GraphPipeline {
       return flowDebt;
     }
 
-    distributeFlowRecurrent(sourcePoint!, sourcePoint!.sourceFlow, []);
+    distributeFlowRecurrent(sourceEdge!.p1, sourceEdge.sourceFlow, []);
   }
 
   static int _lastId = 0;
@@ -237,35 +238,56 @@ class GraphPoint {
 
   List<GraphPoint> points = []; //точки связнные с this
   int id = GraphPipeline.generateId();
-  bool isSource = false;
   double flow = 0;
-  double sourceFlow = 0; // производимое sourcePoint значение потока
-  bool isSink = false;
   Offset position;
 }
 
 class GraphEdge {
-  int id = GraphPipeline.generateId();
-  GraphPoint? reverseFlowDirection(){
-    if(flowDirection ==p1){
-      flowDirection =p2;
-      return flowDirection;
-    }else if(flowDirection ==p2){
-      flowDirection=p1;
-      return flowDirection;
-    }
-    return null;
+  GraphEdge(this._throughputFlow, this.p1, this.p2, this.type){
+   switch(type){
+     case GdsElementType.source:
+       sourceFlow = _throughputFlow;
+   }
   }
+
+  int id = GraphPipeline.generateId();
   GraphPoint p1;
   GraphPoint p2;
 
   ///точка в которую двигается поток flow, null, когда flow = 0;
   GraphPoint? flowDirection;
 
-  GraphEdge(this.throughputFlow, this.p1, this.p2);
+  GdsElementType type;
+  double sourceFlow = 0; // производимое sourcePoint значение потока
+  double _throughputFlow;
 
-  double throughputFlow;
+  double get throughputFlow => (_throughputFlow * _throughputFLowPercentage);
+
+  set throughputFlow(double value) {
+    _throughputFlow = value;
+  }
+
+  double _throughputFLowPercentage = 1.0;
+
+  double get throughputFLowPercentage => _throughputFLowPercentage;
   double flow = 0;
-//Offset p1;
-//Offset p2;
+
+  void changeThroughputFlowPercentage(double value) {
+    if (value > 1 || value < 0) {
+      throw Exception(
+          "Bad value changeThroughputFlowPercentage(), value:${value}");
+    }
+    _throughputFLowPercentage = value;
+  }
+  GraphPoint? reverseFlowDirection() {
+    if (flowDirection == p1) {
+      flowDirection = p2;
+      return flowDirection;
+    } else if (flowDirection == p2) {
+      flowDirection = p1;
+      return flowDirection;
+    }
+    return null;
+  }
+
 }
