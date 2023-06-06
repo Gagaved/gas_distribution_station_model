@@ -64,6 +64,17 @@ Widget getWidgetFromEdge(GraphEdge edge, {required bool isSelect}) {
       return PipelineValveWidget(edge: edge, isSelect: isSelect);
     case GdsElementType.segment:
       return PipelineSegmentWidget(edge: edge, isSelect: isSelect);
+    case GdsElementType.percentageValve:
+      return PipelinePercentageValveWidget(
+        edge: edge,
+        isSelect: isSelect,
+      );
+    case GdsElementType.heater:
+      return PipelineHeaterWidget(edge: edge, isSelect: isSelect);
+    case GdsElementType.reducer:
+      return PipelineReducerWidget(edge: edge, isSelect: isSelect);
+    case GdsElementType.meter:
+      return PipelineMeterWidget(edge: edge, isSelect: isSelect);
     default:
       return PipelineSegmentWidget(edge: edge, isSelect: isSelect);
   }
@@ -71,8 +82,10 @@ Widget getWidgetFromEdge(GraphEdge edge, {required bool isSelect}) {
 
 class PipelinePanelWidget extends StatelessWidget {
   const PipelinePanelWidget({Key? key}) : super(key: key);
-  static final TextEditingController _flowFieldController = TextEditingController();
+  static final TextEditingController _flowFieldController =
+      TextEditingController();
   static final ScrollController _scrollController = ScrollController();
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<GdsPageBloc, GdsState>(
@@ -95,7 +108,7 @@ class PipelinePanelWidget extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Scrollbar(
-                         controller: _scrollController,
+                        controller: _scrollController,
                         child: ListView.builder(
                           controller: _scrollController,
                           itemCount: edgeTypes.length,
@@ -112,12 +125,14 @@ class PipelinePanelWidget extends StatelessWidget {
                                   padding: const EdgeInsets.all(5.0),
                                   child: Card(
                                     elevation: 5,
-                                    color: state.selectedType == edgeTypes[index]
-                                        ? Colors.blue
-                                        : null,
+                                    color:
+                                        state.selectedType == edgeTypes[index]
+                                            ? Colors.blue
+                                            : null,
                                     child: Padding(
                                       padding: const EdgeInsets.all(3.0),
-                                      child: Center(child: Text(edgeTypes[index].name)),
+                                      child: Center(
+                                          child: Text(edgeTypes[index].name)),
                                     ),
                                   ),
                                 ));

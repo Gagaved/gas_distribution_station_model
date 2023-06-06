@@ -1,4 +1,3 @@
-import 'dart:ffi';
 import 'dart:math';
 import 'dart:ui';
 
@@ -102,14 +101,32 @@ class GraphPipeline {
 
   ///
   ///
+  /// уменьшает поток в пути на заданную величину
+  void reduce(FlowWay flowWay, double reduceValue) {
+    print('reduce call');
+    print("flowway: ${flowWay.flow}");
+    flowWay.way.forEach((element) {
+      print(element.id);
+    });
+    print('\n');
+    for (int i = 0; i < flowWay.way.length - 1; i++) {
+      GraphEdge edge = getEdgeBy2Points(flowWay.way[i], flowWay.way[i + 1])!;
+      edge.flow -= reduceValue;
+    }
+    flowWay.flow -= reduceValue;
+  }
+
+  ///
+  ///
   /// done?
   void distributeFlow() {
     GraphEdge? sourceEdge;
     for (var point in points.values) {
       point.flow = 0;
+      point.flowWays = [];
     }
     for (var edge in edges.values) {
-      if (edge.type == GdsElementType.source){
+      if (edge.type == GdsElementType.source) {
         sourceEdge = edge;
       }
       edge.flow = 0;
@@ -124,8 +141,7 @@ class GraphPipeline {
       for (var destinationPoint in point.points) {
         if (way.isInside(destinationPoint)) continue;
         GraphEdge edge = getEdgeBy2Points(point, destinationPoint)!;
-        if ((edge.throughputFlow - edge.flow).toInt() > 0.0 &&
-            lockEdges.isNotInside(edge)) {
+        if (lockEdges.isNotInside(edge)) {
           resultList.add(destinationPoint);
         }
         //resultList.add(destinationPoint);
@@ -140,17 +156,24 @@ class GraphPipeline {
         GraphPoint point, double flow, List<GraphPoint> way) {
       GraphEdge? lastEdge =
           way.isNotEmpty ? getEdgeBy2Points(point, way.last)! : null;
-
       ///проверка на посещеную вершину (избегаем случая прохода по вершине несколько раз)
       if (way.isInside(point)) {
         return flow;
       }
-
       /// для точки потребления:
       if (lastEdge != null && lastEdge.type == GdsElementType.sink) {
-        lastEdge.flow += flow;
-        point.flow += flow;
-        return 0;
+        // if (edge.throughputFlow - edge.flow < forwardedFlow) {
+        //       forwardedFlow = edge.throughputFlow - edge.flow;
+        //    }
+        double flow_p = flow;
+        if(lastEdge.throughputFlow-lastEdge.flow<flow){
+          flow_p = lastEdge.throughputFlow - lastEdge.flow;
+        }
+        lastEdge.flow += flow_p;
+        lastEdge.flowDirection = point;
+        point.flow += flow_p;
+
+        return flow - flow_p;
       }
 
       /// Для всех остальных точек:
@@ -172,7 +195,6 @@ class GraphPipeline {
           GraphEdge edge = getEdgeBy2Points(point, destination)!;
           forwardedFlow =
               oldFlowDebt * (edge.throughputFlow / sumThroughputFlow);
-
           ///
           if (edge.flowDirection == point) {
             if (edge.throughputFlow + edge.flow < forwardedFlow) {
@@ -184,29 +206,86 @@ class GraphPipeline {
             }
           }
 
-          ///
-
           List<GraphPoint> newWay = []
             ..addAll(way)
             ..add(point);
           double remainder =
               distributeFlowRecurrent(destination, forwardedFlow, newWay);
           flowDebt -= forwardedFlow - remainder;
+          if (forwardedFlow - remainder != 0) {
+            point.flowWays.add(FlowWay(newWay, forwardedFlow - remainder));
+          }
           if (remainder != 0) {
             lockEdges.add(edge);
           }
         }
         availableDestinations =
             _getAvailableDestinationsForDistributeFlow(point, way, lockEdges);
-        if (availableDestinations.isEmpty || flowDebt.toInt() == 0) {
+        if (availableDestinations.isEmpty || flowDebt.toInt() == 0 || oldFlowDebt == flowDebt) {
           canDistributeDebtFlow = false;
         }
       }
+
+      ///
+      ///
+      ///
+      ///
+      /// оптимизация входящего потока
+      // if (point.id == 3) {
+      //   print("f");
+      // }
+      //
+      // List<GraphEdge> outEdges = getEdgesByPoint(point)
+      //   ..removeWhere(
+      //       (element) => element.flowStart != point || element.flow == 0);
+      // double sumOutFlow = 0;
+      // double sumInThroughputFlow = 0;
+      // if ((outEdges.isNotEmpty ) && (flowDebt > 0 ) && (flowDebt != flow)) {
+      //   // опритизация только тогда когда уже есть распределенный вниз поток
+      //   for (var edge in outEdges) {
+      //     sumOutFlow += edge.flow;
+      //   }
+      //   List<GraphEdge> inEdges = getEdgesByPoint(point);
+      //   inEdges.removeWhere((element) =>
+      //       element.flowDirection != point ||
+      //       element.flowDirection == null ||
+      //       element == lastEdge);
+      //   for (var edge in inEdges) {
+      //     sumInThroughputFlow += edge.throughputFlow;
+      //   }
+      //   if (lastEdge != null) {
+      //     sumInThroughputFlow += lastEdge.throughputFlow;
+      //   } //отдельно захватываем последнее ребро
+      //   for (var edge in inEdges) {
+      //     double optimalIncomingFlow =
+      //         sumOutFlow * edge.throughputFlow / sumInThroughputFlow;
+      //     if (edge.flow > optimalIncomingFlow) {
+      //       double excess = edge.flow - optimalIncomingFlow;
+      //       List<FlowWay> edgeFlowBundle = [];
+      //       for (FlowWay flowWay in point.flowWays) {
+      //         if (point == edge.flowDirection) {
+      //           edgeFlowBundle.add(flowWay);
+      //         }
+      //       }
+      //       for (FlowWay flowWay in edgeFlowBundle) {
+      //         double reduceValue = (flowWay.flow / edge.flow) * excess;
+      //         reduce(flowWay, reduceValue);
+      //       }
+      //       flowDebt -= excess;
+      //     }
+      //   }
+      // }
+
+      ///
+      ///
+      ///
+
+      ///
+      ///
+      /// Устанавливаем значение потока для точки и ребра
       point.flow += flow - flowDebt;
-      if (lastEdge != null ){
-        //&& lastEdge.type != GdsElementType.source) {
-        if (lastEdge.flowDirection == point ||
-            lastEdge.flowDirection == null) {
+      if (lastEdge != null) {
+        if (lastEdge.flowDirection == point || lastEdge.flowDirection == null) {
           lastEdge.flow += flow - flowDebt;
           lastEdge.flowDirection = point;
         } else {
@@ -217,6 +296,7 @@ class GraphPipeline {
           }
         }
       }
+
       return flowDebt;
     }
 
@@ -240,14 +320,22 @@ class GraphPoint {
   int id = GraphPipeline.generateId();
   double flow = 0;
   Offset position;
+  List<FlowWay> flowWays = [];
+}
+
+class FlowWay {
+  FlowWay(this.way, this.flow);
+
+  List<GraphPoint> way;
+  double flow;
 }
 
 class GraphEdge {
-  GraphEdge(this._throughputFlow, this.p1, this.p2, this.type){
-   switch(type){
-     case GdsElementType.source:
-       sourceFlow = _throughputFlow;
-   }
+  GraphEdge(this._throughputFlow, this.p1, this.p2, this.type) {
+    switch (type) {
+      case GdsElementType.source:
+        sourceFlow = _throughputFlow;
+    }
   }
 
   int id = GraphPipeline.generateId();
@@ -257,9 +345,21 @@ class GraphEdge {
   ///точка в которую двигается поток flow, null, когда flow = 0;
   GraphPoint? flowDirection;
 
+  ///точка откуда двигается поток flow, null, когда flow = 0;
+  GraphPoint? get flowStart {
+    if (flowDirection == null) {
+      return null;
+    }
+    if (flowDirection == p1) {
+      return p2;
+    }
+    return p1;
+  }
+
   GdsElementType type;
   double sourceFlow = 0; // производимое sourcePoint значение потока
   double _throughputFlow;
+
 
   double get throughputFlow => (_throughputFlow * _throughputFLowPercentage);
 
@@ -279,6 +379,7 @@ class GraphEdge {
     }
     _throughputFLowPercentage = value;
   }
+
   GraphPoint? reverseFlowDirection() {
     if (flowDirection == p1) {
       flowDirection = p2;
@@ -289,5 +390,4 @@ class GraphEdge {
     }
     return null;
   }
-
 }

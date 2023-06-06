@@ -58,7 +58,7 @@ class GdsThroughputFLowPercentageElementChangeEvent extends GdsEvent{
 
 }
 
-class GdsSourceFLowElementChangeEvent extends GdsEvent{
+    class GdsSourceFLowElementChangeEvent extends GdsEvent{
   final GraphEdge element;
   final double value;
   GdsSourceFLowElementChangeEvent(this.element,this.value);

@@ -383,6 +383,737 @@ class PipelineValveWidget extends StatelessWidget {
     );
   }
 }
+class PipelinePercentageValveWidget extends StatelessWidget {
+  final GraphEdge edge;
+  final bool isSelect;
+
+  PipelinePercentageValveWidget({required this.edge, super.key, required this.isSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    int id = edge.id;
+    Offset p1 = edge.p1.position;
+    Offset p2 = edge.p2.position;
+    double dragPointSize = 10.0;
+    double additionalSize = 0;
+    double width = (p2.dx - p1.dx).abs() + additionalSize;
+    double height = (p2.dy - p1.dy).abs() + additionalSize;
+    double angle = _getAngle(p1, p2);
+    double len = _getLen(p1, p2);
+
+    return Positioned(
+      top: min(p1.dy, p2.dy) - (dragPointSize),
+      left: min(p1.dx, p2.dx) - (dragPointSize),
+      child: Stack(children: [
+        Container(
+          width: width + dragPointSize * 2,
+          height: height + dragPointSize * 2,
+          child: Stack(
+            children: [
+              ///
+              ///
+              /// Пейнтер линии
+              CustomPaint(
+                  painter: _MyLinePainter(
+                    Offset(
+                      p1.dx - min(p1.dx, p2.dx) + dragPointSize,
+                      p1.dy - min(p1.dy, p2.dy) + dragPointSize,
+                    ),
+                    Offset(p2.dx - min(p1.dx, p2.dx) + dragPointSize,
+                        p2.dy - min(p1.dy, p2.dy) + dragPointSize),
+                  )),
+
+              ///
+              ///
+              /// первая точке
+              Positioned(
+                left: p1.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
+                top: p1.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      Offset correctD = d.delta;
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsPointMoveEvent(edge.p1.id, d.delta));
+                    }
+                  },
+                  child: Container(
+                    width: dragPointSize,
+                    height: dragPointSize,
+                    color: isSelect
+                        ? AdditionalColors.planBorderElement
+                        : null,
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// вторая точке
+              Positioned(
+                left: p2.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
+                top: p2.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsPointMoveEvent(edge.p2.id, d.delta));
+                    }
+                  },
+                  child: Container(
+                    width: dragPointSize,
+                    height: dragPointSize,
+                    color: isSelect
+                        ? AdditionalColors.planBorderElement
+                        : null,
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// Контейнер для детектора
+              Container(
+                width: width + dragPointSize * 2 - additionalSize,
+                height: height + dragPointSize * 2 - additionalSize,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsElementMoveEvent(id, d.delta, d.delta));
+                    }
+                  },
+                  child: RotatedBox(
+                    quarterTurns: width > height ? 1 : 0,
+                    child: Transform.rotate(
+                      angle: width > height ? angle - pi / 2 : angle, //
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 15.0),
+                          child: Container(
+                            width: 10,
+                            color: isSelect
+                                ? AdditionalColors.debugTranslucent
+                                : Colors.black26,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// Значек крана
+              Container(
+                width: width + dragPointSize * 2 - additionalSize,
+                height: height + dragPointSize * 2 - additionalSize,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsElementMoveEvent(id, d.delta, d.delta));
+                    }
+                  },
+                  child: RotatedBox(
+                    quarterTurns: width > height ? 1 : 0,
+                    child: Transform.rotate(
+                      angle: width > height ? angle - pi / 2 : angle, //
+                      child: Container(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 15.0),
+                            child: SizedBox(
+                                width: 30,
+                                child: Image.asset("assets/percentage_valve_image.png")),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+class PipelineHeaterWidget extends StatelessWidget {
+  final GraphEdge edge;
+  final bool isSelect;
+
+  PipelineHeaterWidget({required this.edge, super.key, required this.isSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    int id = edge.id;
+    Offset p1 = edge.p1.position;
+    Offset p2 = edge.p2.position;
+    double dragPointSize = 10.0;
+    double additionalSize = 0;
+    double width = (p2.dx - p1.dx).abs() + additionalSize;
+    double height = (p2.dy - p1.dy).abs() + additionalSize;
+    double angle = _getAngle(p1, p2);
+    double len = _getLen(p1, p2);
+
+    return Positioned(
+      top: min(p1.dy, p2.dy) - (dragPointSize),
+      left: min(p1.dx, p2.dx) - (dragPointSize),
+      child: Stack(children: [
+        Container(
+          width: width + dragPointSize * 2,
+          height: height + dragPointSize * 2,
+          child: Stack(
+            children: [
+              ///
+              ///
+              /// Пейнтер линии
+              CustomPaint(
+                  painter: _MyLinePainter(
+                    Offset(
+                      p1.dx - min(p1.dx, p2.dx) + dragPointSize,
+                      p1.dy - min(p1.dy, p2.dy) + dragPointSize,
+                    ),
+                    Offset(p2.dx - min(p1.dx, p2.dx) + dragPointSize,
+                        p2.dy - min(p1.dy, p2.dy) + dragPointSize),
+                  )),
+
+              ///
+              ///
+              /// первая точке
+              Positioned(
+                left: p1.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
+                top: p1.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      Offset correctD = d.delta;
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsPointMoveEvent(edge.p1.id, d.delta));
+                    }
+                  },
+                  child: Container(
+                    width: dragPointSize,
+                    height: dragPointSize,
+                    color: isSelect
+                        ? AdditionalColors.planBorderElement
+                        : null,
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// вторая точке
+              Positioned(
+                left: p2.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
+                top: p2.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsPointMoveEvent(edge.p2.id, d.delta));
+                    }
+                  },
+                  child: Container(
+                    width: dragPointSize,
+                    height: dragPointSize,
+                    color: isSelect
+                        ? AdditionalColors.planBorderElement
+                        : null,
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// Контейнер для детектора
+              Container(
+                width: width + dragPointSize * 2 - additionalSize,
+                height: height + dragPointSize * 2 - additionalSize,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsElementMoveEvent(id, d.delta, d.delta));
+                    }
+                  },
+                  child: RotatedBox(
+                    quarterTurns: width > height ? 1 : 0,
+                    child: Transform.rotate(
+                      angle: width > height ? angle - pi / 2 : angle, //
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 15.0),
+                          child: Container(
+                            width: 10,
+                            color: isSelect
+                                ? AdditionalColors.debugTranslucent
+                                : Colors.black26,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// Значек крана
+              Container(
+                width: width + dragPointSize * 2 - additionalSize,
+                height: height + dragPointSize * 2 - additionalSize,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsElementMoveEvent(id, d.delta, d.delta));
+                    }
+                  },
+                  child: RotatedBox(
+                    quarterTurns: width > height ? 1 : 0,
+                    child: Transform.rotate(
+                      angle: width > height ? angle - pi / 2 : angle, //
+                      child: Container(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 15.0),
+                            child: SizedBox(
+                                width: 30,
+                                child: Image.asset("assets/heater_image.png")),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+class PipelineReducerWidget extends StatelessWidget {
+  final GraphEdge edge;
+  final bool isSelect;
+
+  PipelineReducerWidget({required this.edge, super.key, required this.isSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    int id = edge.id;
+    Offset p1 = edge.p1.position;
+    Offset p2 = edge.p2.position;
+    double dragPointSize = 10.0;
+    double additionalSize = 0;
+    double width = (p2.dx - p1.dx).abs() + additionalSize;
+    double height = (p2.dy - p1.dy).abs() + additionalSize;
+    double angle = _getAngle(p1, p2);
+    double len = _getLen(p1, p2);
+
+    return Positioned(
+      top: min(p1.dy, p2.dy) - (dragPointSize),
+      left: min(p1.dx, p2.dx) - (dragPointSize),
+      child: Stack(children: [
+        Container(
+          width: width + dragPointSize * 2,
+          height: height + dragPointSize * 2,
+          child: Stack(
+            children: [
+              ///
+              ///
+              /// Пейнтер линии
+              CustomPaint(
+                  painter: _MyLinePainter(
+                    Offset(
+                      p1.dx - min(p1.dx, p2.dx) + dragPointSize,
+                      p1.dy - min(p1.dy, p2.dy) + dragPointSize,
+                    ),
+                    Offset(p2.dx - min(p1.dx, p2.dx) + dragPointSize,
+                        p2.dy - min(p1.dy, p2.dy) + dragPointSize),
+                  )),
+
+              ///
+              ///
+              /// первая точке
+              Positioned(
+                left: p1.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
+                top: p1.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      Offset correctD = d.delta;
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsPointMoveEvent(edge.p1.id, d.delta));
+                    }
+                  },
+                  child: Container(
+                    width: dragPointSize,
+                    height: dragPointSize,
+                    color: isSelect
+                        ? AdditionalColors.planBorderElement
+                        : null,
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// вторая точке
+              Positioned(
+                left: p2.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
+                top: p2.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsPointMoveEvent(edge.p2.id, d.delta));
+                    }
+                  },
+                  child: Container(
+                    width: dragPointSize,
+                    height: dragPointSize,
+                    color: isSelect
+                        ? AdditionalColors.planBorderElement
+                        : null,
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// Контейнер для детектора
+              Container(
+                width: width + dragPointSize * 2 - additionalSize,
+                height: height + dragPointSize * 2 - additionalSize,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsElementMoveEvent(id, d.delta, d.delta));
+                    }
+                  },
+                  child: RotatedBox(
+                    quarterTurns: width > height ? 1 : 0,
+                    child: Transform.rotate(
+                      angle: width > height ? angle - pi / 2 : angle, //
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 15.0),
+                          child: Container(
+                            width: 10,
+                            color: isSelect
+                                ? AdditionalColors.debugTranslucent
+                                : Colors.black26,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// Значек крана
+              Container(
+                width: width + dragPointSize * 2 - additionalSize,
+                height: height + dragPointSize * 2 - additionalSize,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsElementMoveEvent(id, d.delta, d.delta));
+                    }
+                  },
+                  child: RotatedBox(
+                    quarterTurns: width > height ? 1 : 0,
+                    child: Transform.rotate(
+                      angle: width > height ? angle - pi / 2 : angle, //
+                      child: Container(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 15.0),
+                            child: SizedBox(
+                                width: 30,
+                                child: Image.asset("assets/reducer_image.png")),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+class PipelineMeterWidget extends StatelessWidget {
+  final GraphEdge edge;
+  final bool isSelect;
+
+  PipelineMeterWidget({required this.edge, super.key, required this.isSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    int id = edge.id;
+    Offset p1 = edge.p1.position;
+    Offset p2 = edge.p2.position;
+    double dragPointSize = 10.0;
+    double additionalSize = 0;
+    double width = (p2.dx - p1.dx).abs() + additionalSize;
+    double height = (p2.dy - p1.dy).abs() + additionalSize;
+    double angle = _getAngle(p1, p2);
+    double len = _getLen(p1, p2);
+
+    return Positioned(
+      top: min(p1.dy, p2.dy) - (dragPointSize),
+      left: min(p1.dx, p2.dx) - (dragPointSize),
+      child: Stack(children: [
+        Container(
+          width: width + dragPointSize * 2,
+          height: height + dragPointSize * 2,
+          child: Stack(
+            children: [
+              ///
+              ///
+              /// Пейнтер линии
+              CustomPaint(
+                  painter: _MyLinePainter(
+                    Offset(
+                      p1.dx - min(p1.dx, p2.dx) + dragPointSize,
+                      p1.dy - min(p1.dy, p2.dy) + dragPointSize,
+                    ),
+                    Offset(p2.dx - min(p1.dx, p2.dx) + dragPointSize,
+                        p2.dy - min(p1.dy, p2.dy) + dragPointSize),
+                  )),
+
+              ///
+              ///
+              /// первая точке
+              Positioned(
+                left: p1.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
+                top: p1.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      Offset correctD = d.delta;
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsPointMoveEvent(edge.p1.id, d.delta));
+                    }
+                  },
+                  child: Container(
+                    width: dragPointSize,
+                    height: dragPointSize,
+                    color: isSelect
+                        ? AdditionalColors.planBorderElement
+                        : null,
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// вторая точке
+              Positioned(
+                left: p2.dx - min(p1.dx, p2.dx) + dragPointSize / 2,
+                top: p2.dy - min(p1.dy, p2.dy) + dragPointSize / 2,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsPointMoveEvent(edge.p2.id, d.delta));
+                    }
+                  },
+                  child: Container(
+                    width: dragPointSize,
+                    height: dragPointSize,
+                    color: isSelect
+                        ? AdditionalColors.planBorderElement
+                        : null,
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// Контейнер для детектора
+              Container(
+                width: width + dragPointSize * 2 - additionalSize,
+                height: height + dragPointSize * 2 - additionalSize,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsElementMoveEvent(id, d.delta, d.delta));
+                    }
+                  },
+                  child: RotatedBox(
+                    quarterTurns: width > height ? 1 : 0,
+                    child: Transform.rotate(
+                      angle: width > height ? angle - pi / 2 : angle, //
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 15.0),
+                          child: Container(
+                            width: 10,
+                            color: isSelect
+                                ? AdditionalColors.debugTranslucent
+                                : Colors.black26,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              ///
+              ///
+              /// Значек крана
+              Container(
+                width: width + dragPointSize * 2 - additionalSize,
+                height: height + dragPointSize * 2 - additionalSize,
+                child: GestureDetector(
+                  onTap: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(GdsSelectElementEvent(edge));
+                  },
+                  onPanUpdate: (d) {
+                    if (isSelect) {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(GdsElementMoveEvent(id, d.delta, d.delta));
+                    }
+                  },
+                  child: RotatedBox(
+                    quarterTurns: width > height ? 1 : 0,
+                    child: Transform.rotate(
+                      angle: width > height ? angle - pi / 2 : angle, //
+                      child: Container(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 15.0),
+                            child: SizedBox(
+                                width: 30,
+                                child: Image.asset("assets/meter_image.png")),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+}
 
 class PipelineFloatingInformationCardWidget extends StatelessWidget {
   const PipelineFloatingInformationCardWidget({Key? key, required this.edge})

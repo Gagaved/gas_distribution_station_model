@@ -96,7 +96,7 @@ class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
 
     graph!.link(graph!.points[1]!, graph!.points[2]!, 100, GdsElementType.source);
     graph!.link(graph!.points[2]!, graph!.points[3]!, 100, GdsElementType.segment);
-    graph!.link(graph!.points[3]!, graph!.points[4]!, 100, GdsElementType.sink);
+    graph!.link(graph!.points[3]!, graph!.points[4]!, 50, GdsElementType.sink);
     _selectedType = GdsElementType.segment;
     emit(GdsMainState(graph!, _selectedElement, _selectedType!));
   }

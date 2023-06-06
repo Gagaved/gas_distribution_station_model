@@ -57,6 +57,11 @@ flutter:
   assets:
     - assets/appainter_theme.json
     - assets/valve_image.png
+    - assets/percentage_valve_image.png
+    - assets/meter_image.png
+    - assets/heater_image.png
+    - assets/reducer_image.png
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
