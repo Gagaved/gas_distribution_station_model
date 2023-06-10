@@ -4,13 +4,16 @@ part of 'gds_bloc.dart';
 abstract class GdsEvent {}
 
 class AddElementButtonPressGdsEvent extends GdsEvent {
-  final double throughputFlow;
-  AddElementButtonPressGdsEvent(this.throughputFlow);}
+  final double diam;
+
+  AddElementButtonPressGdsEvent(this.diam);
+}
 
 class DeleteElementButtonPressGdsEvent extends GdsEvent {
-  DeleteElementButtonPressGdsEvent();}
+  DeleteElementButtonPressGdsEvent();
+}
 
-class ChangeSelectedTypeInPanelEvent extends GdsEvent{
+class ChangeSelectedTypeInPanelEvent extends GdsEvent {
   final GdsElementType type;
 
   ChangeSelectedTypeInPanelEvent(this.type);
@@ -21,7 +24,7 @@ class GdsElementMoveEvent extends GdsEvent {
   final Offset p1;
   final Offset p2;
 
-  GdsElementMoveEvent(this.id, this.p1,this.p2);
+  GdsElementMoveEvent(this.id, this.p1, this.p2);
 }
 
 class GdsPointMoveEvent extends GdsEvent {
@@ -30,10 +33,8 @@ class GdsPointMoveEvent extends GdsEvent {
 
   GdsPointMoveEvent(this.pointId, this.delta);
 }
-class CalculateFlowButtonPressGdsEvent extends GdsEvent{
 
-}
-
+class CalculateFlowButtonPressGdsEvent extends GdsEvent {}
 
 class GdsElementChangeSizeEvent extends GdsEvent {
   final int id;
@@ -51,18 +52,33 @@ class GdsSelectElementEvent extends GdsEvent {
     this.element,
   );
 }
-class GdsThroughputFLowPercentageElementChangeEvent extends GdsEvent{
+
+class GdsThroughputFLowPercentageElementChangeEvent extends GdsEvent {
   final GraphEdge element;
   final double value;
-  GdsThroughputFLowPercentageElementChangeEvent(this.element,this.value);
 
+  GdsThroughputFLowPercentageElementChangeEvent(this.element, this.value);
 }
 
-    class GdsSourceFLowElementChangeEvent extends GdsEvent{
+class GdsTargetPressureReducerElementChangeEvent extends GdsEvent {
   final GraphEdge element;
   final double value;
-  GdsSourceFLowElementChangeEvent(this.element,this.value);
 
+  GdsTargetPressureReducerElementChangeEvent(this.element, this.value);
+}
+
+class GdsLenElementChangeEvent extends GdsEvent {
+  final GraphEdge element;
+  final double value;
+
+  GdsLenElementChangeEvent(this.element, this.value);
+}
+
+class GdsSourceFLowElementChangeEvent extends GdsEvent {
+  final GraphEdge element;
+  final double value;
+
+  GdsSourceFLowElementChangeEvent(this.element, this.value);
 }
 
 class GdsDeselectElementEvent extends GdsEvent {}
@@ -73,4 +89,5 @@ class GdsCreateElementEvent extends GdsEvent {
   GdsCreateElementEvent(this.type);
 }
 
-class GdsForceUpdateEvent extends GdsEvent {}
+class SaveGdsEvent extends GdsEvent {}
+class LoadGdsEvent extends GdsEvent {}

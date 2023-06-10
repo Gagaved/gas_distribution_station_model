@@ -11,3 +11,6 @@ class GdsMainState extends GdsState{
 }
 class GdsInitial extends GdsState {
 }
+class GdsLoadedState extends GdsState{
+
+}

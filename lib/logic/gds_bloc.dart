@@ -1,11 +1,13 @@
 import 'dart:async';
-import 'dart:math';
+//import 'dart:math';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/gestures.dart';
+import 'package:gas_distribution_station_model/data/entities/point.dart';
 import 'package:gas_distribution_station_model/models/GDS_graph_model.dart';
 import 'package:gas_distribution_station_model/models/gds_element_type.dart';
 import 'package:meta/meta.dart';
+import 'package:gas_distribution_station_model/globals.dart' as globals;
 
 part 'gds_event.dart';
 
@@ -34,7 +36,7 @@ class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
 
   GdsPageBloc() : super(GdsInitial()) {
     on<AddElementButtonPressGdsEvent>((event, emit) {
-      _addNewEdge(event.throughputFlow);
+      _addNewEdge(event.diam);
       emit(GdsMainState(graph!, _selectedElement, _selectedType!));
     });
     on<DeleteElementButtonPressGdsEvent>((event, emit) {
@@ -43,7 +45,7 @@ class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
       emit(GdsMainState(graph!, _selectedElement, _selectedType!));
     });
     on<CalculateFlowButtonPressGdsEvent>((event, emit) {
-      graph!.distributeFlow();
+      graph!.distributeFlowAndCalculatePressure();
       emit(GdsMainState(graph!, _selectedElement, _selectedType!));
     });
     on<GdsSelectElementEvent>((event, emit) {
@@ -82,32 +84,83 @@ class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
       event.element.changeThroughputFlowPercentage(event.value);
       emit(GdsMainState(graph!, _selectedElement, _selectedType!));
     });
-    on<GdsSourceFLowElementChangeEvent>((event,emit){
-      event.element.sourceFlow = min(event.value,event.element.throughputFlow);
+    on<GdsSourceFLowElementChangeEvent>((event, emit) {
+      event.element.sourceFlow =
+          event.value; //todo ограничить максимумом потребления
+      //emit(GdsMainState(graph!, _selectedElement, _selectedType!));
+    });
+    on<GdsLenElementChangeEvent>((event, emit) {
+      event.element.len = event.value;
+      //emit(GdsMainState(graph!, _selectedElement, _selectedType!));
+    });
+    on<GdsTargetPressureReducerElementChangeEvent>((event, emit) {
+      event.element.targetPressure = event.value;
+      emit(GdsMainState(graph!, _selectedElement, _selectedType!));
+    });
+    on<SaveGdsEvent>((event, emit) {
+      saveGdsToDB();
     });
 
+    on<LoadGdsEvent>((event, emit) async {
+      emit(GdsLoadedState());
+      FilePickerResult? result = await FilePicker.platform.pickFiles();
 
-    graph = GraphPipeline();
-    graph!.addPoint(position: const Offset(100, 0));
-    graph!.addPoint(position: Offset(100, 100));
-    graph!.addPoint(position: Offset(100, 200));
-    //_graph!.addPoint();
-    graph!.addPoint(position: Offset(100, 300));
+      if (result != null) {
+        File file = File(result.files.single.path);
+      } else {
+        // User canceled the picker
+      }
+      await loadGdsFromDB();
+      emit(GdsMainState(graph!, _selectedElement, _selectedType!));
+    });
 
-    graph!.link(graph!.points[1]!, graph!.points[2]!, 100, GdsElementType.source);
-    graph!.link(graph!.points[2]!, graph!.points[3]!, 100, GdsElementType.segment);
-    graph!.link(graph!.points[3]!, graph!.points[4]!, 50, GdsElementType.sink);
-    _selectedType = GdsElementType.segment;
-    emit(GdsMainState(graph!, _selectedElement, _selectedType!));
+    // graph = GraphPipeline();
+    // graph!.addPoint(position: const Offset(100, 0));
+    // graph!.addPoint(position: Offset(100, 100));
+    // graph!.addPoint(position: Offset(100, 200));
+    // //_graph!.addPoint();
+    // graph!.addPoint(position: Offset(100, 300));
+    //
+    // graph!.link(graph!.points[1]!, graph!.points[2]!, 0.1,
+    //     GdsElementType.source, 100, 2);
+    // graph!.link(
+    //     graph!.points[2]!, graph!.points[3]!, 0.1, GdsElementType.segment, 100);
+    // graph!.link(
+    //     graph!.points[3]!, graph!.points[4]!, 0.1, GdsElementType.sink, 100);
+     _selectedType = GdsElementType.segment;
+    //emit(GdsInitial());
+    add(LoadGdsEvent());
   }
 
-  void _addNewEdge(double throughputFlow) {
+  void _addNewEdge(double diam) {
     var p1 = graph!.addPoint(position: Offset(300, 300));
     var p2 = graph!.addPoint(position: Offset(300, 400));
-    graph!.link(p1, p2, throughputFlow, _selectedType!);
+    graph!.link(p1, p2, diam, _selectedType!, 0);
+  }
+
+  Future<void> saveGdsToDB() async {
+    var point_dao = globals.database.pointDAO;
+    var edge_dao = globals.database.edgeDAO;
+    await point_dao.deleteAllPoints();
+    await edge_dao.deleteAllEdges();
+    for (var point in graph!.points.values.toList()) {
+      await point_dao.insertPoint(GraphPoint.toPointDB(point));
+    }
+    for (var edge in graph!.edges.values.toList()) {
+      await edge_dao.insertEdge(edge.toEdgeDB());
+    }
   }
 
   void _deleteElement(GraphEdge graphEdge) {
     graph!.removeEdgeBy2Points(graphEdge.p1, graphEdge.p2);
+  }
+
+  Future<void> loadGdsFromDB() async {
+    var point_dao = globals.database.pointDAO;
+    var edge_dao = globals.database.edgeDAO;
+    var points = await point_dao.getAllPoints();
+    var edges = await edge_dao.getAllEdges();
+    graph = GraphPipeline(points,edges);
+    print(points.length);
   }
 }
