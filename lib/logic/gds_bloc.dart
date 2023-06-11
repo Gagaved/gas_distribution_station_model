@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 //import 'dart:math';
 
 import 'package:bloc/bloc.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/gestures.dart';
 import 'package:gas_distribution_station_model/data/entities/point.dart';
+import 'package:gas_distribution_station_model/data/util/FileManager.dart';
 import 'package:gas_distribution_station_model/models/GDS_graph_model.dart';
 import 'package:gas_distribution_station_model/models/gds_element_type.dart';
 import 'package:meta/meta.dart';
@@ -45,7 +48,7 @@ class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
       emit(GdsMainState(graph!, _selectedElement, _selectedType!));
     });
     on<CalculateFlowButtonPressGdsEvent>((event, emit) {
-      graph!.distributeFlowAndCalculatePressure();
+      graph!.calculatePipeline();
       emit(GdsMainState(graph!, _selectedElement, _selectedType!));
     });
     on<GdsSelectElementEvent>((event, emit) {
@@ -84,8 +87,8 @@ class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
       event.element.changeThroughputFlowPercentage(event.value);
       emit(GdsMainState(graph!, _selectedElement, _selectedType!));
     });
-    on<GdsSourceFLowElementChangeEvent>((event, emit) {
-      event.element.sourceFlow =
+    on<GdsSinkTargetFLowElementChangeEvent>((event, emit) {
+      event.element.targetFlow =
           event.value; //todo ограничить максимумом потребления
       //emit(GdsMainState(graph!, _selectedElement, _selectedType!));
     });
@@ -93,43 +96,30 @@ class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
       event.element.len = event.value;
       //emit(GdsMainState(graph!, _selectedElement, _selectedType!));
     });
+    on<GdsSourcePressureElementChangeEvent>((event,emit){
+      event.element.pressure = event.value*1000000;
+    });
     on<GdsTargetPressureReducerElementChangeEvent>((event, emit) {
       event.element.targetPressure = event.value;
       emit(GdsMainState(graph!, _selectedElement, _selectedType!));
     });
-    on<SaveGdsEvent>((event, emit) {
-      saveGdsToDB();
+    on<ExportGdsToFileEvent>((event, emit) {
+      exportGdsToFile();
     });
 
-    on<LoadGdsEvent>((event, emit) async {
+    on<LoadFromFileEvent>((event, emit) async {
       emit(GdsLoadedState());
-      FilePickerResult? result = await FilePicker.platform.pickFiles();
-
-      if (result != null) {
-        File file = File(result.files.single.path);
-      } else {
-        // User canceled the picker
-      }
-      await loadGdsFromDB();
+      await loadGdsFromFile();
       emit(GdsMainState(graph!, _selectedElement, _selectedType!));
     });
-
-    // graph = GraphPipeline();
-    // graph!.addPoint(position: const Offset(100, 0));
-    // graph!.addPoint(position: Offset(100, 100));
-    // graph!.addPoint(position: Offset(100, 200));
-    // //_graph!.addPoint();
-    // graph!.addPoint(position: Offset(100, 300));
-    //
-    // graph!.link(graph!.points[1]!, graph!.points[2]!, 0.1,
-    //     GdsElementType.source, 100, 2);
-    // graph!.link(
-    //     graph!.points[2]!, graph!.points[3]!, 0.1, GdsElementType.segment, 100);
-    // graph!.link(
-    //     graph!.points[3]!, graph!.points[4]!, 0.1, GdsElementType.sink, 100);
-     _selectedType = GdsElementType.segment;
-    //emit(GdsInitial());
-    add(LoadGdsEvent());
+    on<LoadFromDBEvent>((event, emit) async {
+      emit(GdsLoadedState());
+      await loadGdsFromDb();
+      emit(GdsMainState(graph!, _selectedElement, _selectedType!));
+    });
+    _selectedType = GdsElementType.segment;
+    add(LoadFromDBEvent());
+    emit(GdsInitial());
   }
 
   void _addNewEdge(double diam) {
@@ -138,29 +128,50 @@ class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
     graph!.link(p1, p2, diam, _selectedType!, 0);
   }
 
-  Future<void> saveGdsToDB() async {
-    var point_dao = globals.database.pointDAO;
-    var edge_dao = globals.database.edgeDAO;
-    await point_dao.deleteAllPoints();
-    await edge_dao.deleteAllEdges();
-    for (var point in graph!.points.values.toList()) {
-      await point_dao.insertPoint(GraphPoint.toPointDB(point));
-    }
-    for (var edge in graph!.edges.values.toList()) {
-      await edge_dao.insertEdge(edge.toEdgeDB());
+  Future<void> exportGdsToFile() async {
+    await saveGdsToDB();
+    String? path = await FilePicker.platform.saveFile(
+      dialogTitle: 'Please select an output file:',
+      fileName: 'output-file.Json',
+    );
+    print(path);
+    if (path != null) {
+      globals.database.writeDBDataToFile(path);
+    } else {
+      throw Exception("error load file");
     }
   }
 
   void _deleteElement(GraphEdge graphEdge) {
     graph!.removeEdgeBy2Points(graphEdge.p1, graphEdge.p2);
   }
-
-  Future<void> loadGdsFromDB() async {
+  
+  Future<void> saveGdsToDB() async {
+    var point_dao = globals.database.pointDAO;
+    var edge_dao = globals.database.edgeDAO;
+    await point_dao.deleteAllPoints();
+    await edge_dao.deleteAllEdges();
+    graph!.points.values.toList().forEach((element) {print(element.position.dx);});
+    await point_dao.insertPoints(graph!.points.values.toList());
+    await edge_dao.insertEdges(graph!.edges.values.toList());
+  }
+  Future<void> loadGdsFromDb() async {
     var point_dao = globals.database.pointDAO;
     var edge_dao = globals.database.edgeDAO;
     var points = await point_dao.getAllPoints();
     var edges = await edge_dao.getAllEdges();
-    graph = GraphPipeline(points,edges);
-    print(points.length);
+    graph = GraphPipeline(points, edges);
+  }
+
+  Future<void> loadGdsFromFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+
+    if (result != null) {
+      File file = File(result.files.single.path!);
+      await globals.database.replaceDBDataFromFile(file);
+      await loadGdsFromDb();
+    } else {
+      // User canceled the picker
+    }
   }
 }

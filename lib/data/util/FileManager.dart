@@ -14,7 +14,7 @@ class FileManager {
     return edgesJson.map((json) => Edge.fromJson(json)).toList();
   }
 
-  static void writePointsAndEdgesToFile(List<Point> points, List<Edge> edges, String filename) {
+  static File writePointsAndEdgesToFile(List<Point> points, List<Edge> edges, String filename) {
     final data = {
       'points': points.map((point) => point.toJson()).toList(),
       'edges': edges.map((edge) => edge.toJson()).toList(),
@@ -22,10 +22,10 @@ class FileManager {
     final jsonString = jsonEncode(data);
     final file = File(filename);
     file.writeAsStringSync(jsonString);
+    return file;
   }
 
-  static Tuple2<List<Point>, List<Edge>> readPointsAndEdgesFromFile(String filename) {
-    final file = File(filename);
+  static Tuple2<List<Point>, List<Edge>> readPointsAndEdgesFromFile(File file) {
     final jsonString = file.readAsStringSync();
     final data = jsonDecode(jsonString);
     final List<dynamic> pointsJson = data['points'];

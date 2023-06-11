@@ -13,17 +13,20 @@ extension MyFancyList<T> on List<T> {
 
 class GraphPipeline {
   double GAS_DENSITY = 0.657;
-   Map<int, GraphPoint> points = {};
-   Map<String, GraphEdge> edges = {};
+  Map<int, GraphPoint> points = {};
+  Map<String, GraphEdge> edges = {};
 
-  GraphPipeline(List<Point> pointsDB, List<Edge> edgesDB){
-    for(var pointDB in pointsDB){
-      points[pointDB.id] = GraphPoint.fromDbPoint(pointDB);
-      _lastId = max(pointDB.id,_lastId);
+  GraphPipeline(List<Point> pointsDB, List<Edge> edgesDB) {
+    for (var pointDB in pointsDB) {
+      points[pointDB.id] = GraphPoint.fromPoint(pointDB);
+      _lastId = max(pointDB.id, _lastId);
     }
-    for(var edgeDB in edgesDB){
-      String key = "${min(edgeDB.p1id,edgeDB.p2id)}-${max(edgeDB.p1id, edgeDB.p2id)}";
-      edges[key] = GraphEdge(edgeDB.diam, points[edgeDB.p1id]!, points[edgeDB.p2id]!, GdsElementType.values[edgeDB.typeId]);
+    for (var edgeDB in edgesDB) {
+      String key =
+          "${min(edgeDB.p1id, edgeDB.p2id)}-${max(edgeDB.p1id, edgeDB.p2id)}";
+      edges[key] = GraphEdge.fromEdge(edge: edgeDB, graphPipeline: this);
+      edges[key]!.p1.points.add(edges[key]!.p2);
+      edges[key]!.p2.points.add(edges[key]!.p1);
     }
   }
 
@@ -31,7 +34,6 @@ class GraphPipeline {
     String key = "${min(p1.id, p2.id)}-${max(p1.id, p2.id)}";
     return edges[key];
   }
-
 
   ///
   ///
@@ -76,7 +78,14 @@ class GraphPipeline {
   void link(GraphPoint p1, GraphPoint p2, double diam, GdsElementType type,
       double len,
       [double sourceFlow = 0.0]) {
-    var newEdge = GraphEdge(diam, p1, p2, type, len, sourceFlow);
+    var newEdge = GraphEdge(
+        graphPipeline: this,
+        diam: diam,
+        p1id: p1.id,
+        p2id: p2.id,
+        typeId: type.index,
+        len: len,
+        id: generateId());
     String key = "${min(p1.id, p2.id)}-${max(p1.id, p2.id)}";
     if (p1.points.isNotInside(p2)) {
       p1.points.add(p2);
@@ -115,7 +124,8 @@ class GraphPipeline {
   /// Добавляет новую вершину в граф
   GraphPoint addPoint(
       {double sourceFlow = 0, bool isSink = false, required Offset position}) {
-    var newPoint = GraphPoint(generateId(),position);
+    var newPoint = GraphPoint(
+        id: generateId(), positionX: position.dx, positionY: position.dy);
     points[newPoint.id] = newPoint;
     return newPoint;
   }
@@ -136,7 +146,8 @@ class GraphPipeline {
       destinations = _getAvailableDestinations(point, way, lockEdges);
     }
     for (var edge in lockEdges) {
-      edge.minCrossSectionOfThisPart = min(minCross,edge.minCrossSectionOfThisPart);
+      edge.minCrossSectionOfThisPart =
+          min(minCross, edge.minCrossSectionOfThisPart);
     }
   }
 
@@ -171,15 +182,19 @@ class GraphPipeline {
 
     /// для точки потребления:
     if (lastEdge != null && lastEdge.type == GdsElementType.sink) {
-      // if (edge.throughputFlow - edge.flow < forwardedFlow) {
-      //       forwardedFlow = edge.throughputFlow - edge.flow;
-      //    }
-      double flow_p = flow;
-      lastEdge.flow += flow_p;
-      lastEdge.flowDirection = point;
-      point.flow += flow_p;
-
-      return flow - flow_p;
+      double demandReminder = lastEdge.targetFlow - lastEdge.flow;
+      if (flow != 0) {
+        lastEdge.flowDirection = point;
+      }
+      if (flow > demandReminder) {
+        lastEdge.flow += demandReminder;
+        point.flow += demandReminder;
+        return flow - demandReminder;
+      } else {
+        lastEdge.flow += flow;
+        point.flow += flow;
+        return 0;
+      }
     }
 
     /// Для всех остальных точек:
@@ -197,7 +212,7 @@ class GraphPipeline {
         _calculateMinCrossSections(destination, [point, destination]);
         sumCrossSection += edge!.minCrossSectionOfThisPart;
       }
-      if(sumCrossSection==0){
+      if (sumCrossSection == 0) {
         canDistributeDebtFlow = false;
         continue;
       }
@@ -206,6 +221,7 @@ class GraphPipeline {
         GraphEdge edge = getEdgeBy2Points(point, destination)!;
         forwardedFlow =
             oldFlowDebt * (edge.minCrossSectionOfThisPart / sumCrossSection);
+
         ///
         // if (edge.flowDirection == point) {
         //   if (edge.crossSection + edge.flow < forwardedFlow) {
@@ -265,7 +281,8 @@ class GraphPipeline {
     switch (lastEdge?.type) {
       case GdsElementType.reducer:
         {
-          if (pressureFromLastEdge>lastEdge!.targetPressure) point.pressure = lastEdge!.targetPressure;
+          if (pressureFromLastEdge >= lastEdge!.targetPressure)
+            point.pressure = lastEdge!.targetPressure;
         }
         break;
       default:
@@ -319,30 +336,79 @@ class GraphPipeline {
     }
   }
 
+  void _calculateTemperatureRecurrent(GraphPoint point, List<GraphPoint> way) {
+    double c = 2.226; //удельная теплоемкость метана
+    GraphEdge? lastEdge =
+        way.isNotEmpty ? getEdgeBy2Points(point, way.last)! : null;
+
+    ///проверка на посещеную вершину (избегаем случая прохода по вершине несколько раз)
+    if (way.isInside(point)) {
+      return;
+    }
+    List<GraphEdge> lockEdges = [];
+    List<GraphPoint> availableDestinations =
+        _getAvailableDestinations(point, way, lockEdges);
+    for (GraphPoint destination in availableDestinations) {
+      GraphEdge edge = getEdgeBy2Points(point, destination)!;
+      if (edge.flowDirection == destination) {
+        continue;
+      }
+      List<GraphPoint> newWay = []
+        ..addAll(way)
+        ..add(point);
+      _calculateTemperatureRecurrent(destination, newWay);
+      lastEdge!.temperature = (edge.temperature * c * edge.flow +
+              lastEdge.temperature * c * edge.flow) /
+          ((lastEdge.flow + edge.flow) * c);
+    }
+    switch (lastEdge?.type) {
+      case GdsElementType.heater:
+        double dT = lastEdge!.heaterPower / (c * lastEdge.flow);
+        lastEdge.temperature += dT;
+        break;
+      case GdsElementType.reducer:
+        lastEdge!.temperature =
+            (lastEdge!.flowStart!.pressure - lastEdge.flowDirection!.pressure) *
+                278.15 /
+                1000000;
+      default:
+    }
+  }
+
   ///
   ///
   ///функция распределения потока
-  void distributeFlowAndCalculatePressure() {
+  void calculatePipeline() {
     GraphEdge? sourceEdge;
     for (var point in points.values) {
       point.flow = 0;
       point.flowWays = [];
       point.pressure = 0;
     }
+    List<GraphEdge> sinks = [];
     for (var edge in edges.values) {
       if (edge.type == GdsElementType.source) {
         sourceEdge = edge;
         sourceEdge.p1.pressure = sourceEdge.pressure;
         sourceEdge.p2.pressure = sourceEdge.pressure;
+      } else if (edge.type == GdsElementType.sink) {
+        sinks.add(edge);
+        sourceEdge!.sourceFlow += edge.targetFlow;
       } else {
         edge.pressure = 0;
       }
       edge.flow = 0;
       edge.minCrossSectionOfThisPart = edge.crossSection;
     }
-    _distributeFlowRecurrent(sourceEdge!.p1, sourceEdge.sourceFlow!, []);
+    _distributeFlowRecurrent(sourceEdge!.p2, sourceEdge.sourceFlow, []);
     _calculatePressureRecurrent(
-        sourceEdge!.p2, sourceEdge.pressure, [sourceEdge.p1]);
+        sourceEdge!.p1, sourceEdge.pressure, [sourceEdge.p2]);
+    for (var sinkEdge in sinks) {
+      if (sinkEdge.flow != 0) {
+        _calculateTemperatureRecurrent(
+            sinkEdge.flowStart!, [sinkEdge.flowDirection!]);
+      }
+    }
   }
 
   static int _lastId = 0;
@@ -351,30 +417,39 @@ class GraphPipeline {
     _lastId += 1;
     return _lastId;
   }
+
+  GraphPoint? getPointById(int id) {
+    return points[id];
+  }
 }
 
-class GraphPoint {
-
+class GraphPoint extends Point {
   List<GraphPoint> points = []; //точки связнные с this
-  int id;
-
   ///
   /// давление в паскалях
   double pressure = 0;
   double flow = 0;
-  Offset position;
   List<FlowWay> flowWays = [];
 
-  GraphPoint(this.id,
-  this.position,);
-
-  static Point toPointDB(GraphPoint graphPoint) {
-    return Point(id: graphPoint.id, positionX: graphPoint.position.dx, positionY: graphPoint.position.dy);
+  Offset get position {
+    return Offset(positionX, positionY);
   }
 
-  static GraphPoint fromDbPoint(Point pointDB) {
-    return GraphPoint(pointDB.id,Offset(pointDB.positionX,pointDB.positionY));
+  set position(Offset offset) {
+    positionX = offset.dx;
+    positionY = offset.dy;
   }
+
+  GraphPoint(
+      {required super.id,
+      required super.positionX,
+      required super.positionY}) {}
+
+  GraphPoint.fromPoint(Point point)
+      : super(
+            id: point.id,
+            positionY: point.positionY,
+            positionX: point.positionX) {}
 }
 
 class FlowWay {
@@ -384,20 +459,60 @@ class FlowWay {
   double flow;
 }
 
-class GraphEdge {
-  GraphEdge(this.diam, this.p1, this.p2, this.type,
-      [this.len = 100, flow = 0.0]) {
-    switch (type) {
+class GraphEdge extends Edge {
+  double targetFlow = 0;
+
+  GraphEdge.fromEdge({required Edge edge, required this.graphPipeline})
+      : super(
+            id: edge.id,
+            diam: edge.diam,
+            len: edge.diam,
+            p1id: edge.p1id,
+            p2id: edge.p2id,
+            typeId: edge.typeId) {
+    switch (typeId) {
       case GdsElementType.source:
         pressure = 10000000;
+        break;
+      case GdsElementType.sink:
+        targetFlow = 10;
+      default:
     }
+
+    p1 = graphPipeline!.getPointById(p1id)!;
+    p2 = graphPipeline!.getPointById(p2id)!;
+    type = GdsElementType.values[typeId];
     sourceFlow = flow;
     _crossSection = pi * pow(diam / 2, 2);
   }
 
+  GraphEdge(
+      {required super.id,
+      required super.p1id,
+      required super.p2id,
+      required super.typeId,
+      required super.diam,
+      required super.len,
+      required this.graphPipeline}) {
+    switch (typeId) {
+      case GdsElementType.source:
+        pressure = 10000000;
+        break;
+      case GdsElementType.heater:
+        heaterPower = 10000;
+      default:
+    }
+    p1 = graphPipeline!.getPointById(p1id)!;
+    p2 = graphPipeline!.getPointById(p2id)!;
+    type = GdsElementType.values[typeId];
+    sourceFlow = flow;
+    _crossSection = pi * pow(diam / 2, 2);
+  }
+
+  GraphPipeline? graphPipeline;
   int id = GraphPipeline.generateId();
-  GraphPoint p1;
-  GraphPoint p2;
+  late GraphPoint p1;
+  late GraphPoint p2;
 
   ///
   /// давление в паскалях
@@ -407,13 +522,10 @@ class GraphEdge {
   ///для редуктора... todo добавить возможноть изменять
   double targetPressure = 1200000;
 
-  ///
-  /// длина участка, в м
-  double len;
-
-  ///
   /// поперечное сечение участка в м^2
   double _crossSection = 0;
+
+  double temperature = 293.15;
 
   double get crossSection => _crossSection * openPercentage;
 
@@ -441,15 +553,13 @@ class GraphEdge {
     return p1;
   }
 
-  GdsElementType type;
-
-  ///
-  /// диаметр трубы
-  double diam;
+  late GdsElementType type;
 
   ///
   /// источник потока
   double sourceFlow = 0;
+
+  double heaterPower = 0;
 
   double flow = 0;
 
@@ -473,6 +583,12 @@ class GraphEdge {
   }
 
   Edge toEdgeDB() {
-    return Edge(id: id, p1id: p1.id, p2id: p2.id, typeId: type.index, diam: diam, len: len);
+    return Edge(
+        id: id,
+        p1id: p1.id,
+        p2id: p2.id,
+        typeId: type.index,
+        diam: diam,
+        len: len);
   }
 }

@@ -299,6 +299,30 @@ class PipelinePercentageValveWidget extends StatelessWidget {
   }
 }
 
+
+class PipelineFilterWidget extends StatelessWidget {
+  final GraphEdge edge;
+  final bool isSelect;
+
+  const PipelineFilterWidget(
+      {required this.edge, super.key, required this.isSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return PipelineWidget(
+        edge: edge,
+        isSelect: isSelect,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 15.0),
+            child: SizedBox(
+                width: 30,
+                child: Image.asset("assets/filter_image.png")),
+          ),
+        ));
+  }
+}
+
 class PipelineHeaterWidget extends StatelessWidget {
   final GraphEdge edge;
   final bool isSelect;
@@ -372,11 +396,12 @@ class PipelineInformationCardWidget extends StatelessWidget {
   static TextEditingController sourceFlowValueTextController =
       TextEditingController();
   static TextEditingController lenValueTextController = TextEditingController();
-
+  static TextEditingController sourcePressureValueTextController = TextEditingController();
   @override
   Widget build(BuildContext context) {
     sourceFlowValueTextController.text = edge.sourceFlow.toString();
     lenValueTextController.text = edge.len.toString();
+    sourcePressureValueTextController.text = (edge.pressure/1000000).toString();
     return Card(
       elevation: 10,
       child: SizedBox(
@@ -390,6 +415,7 @@ class PipelineInformationCardWidget extends StatelessWidget {
             Text("длина участка: ${edge.len}"),
             Text("Flow: ${edge.flow} м^2 / c"),
             Text("Давление: ${edge.pressure / 1000000} МПа"),
+            Text("температура: ${edge.temperature - 273.15} Цельсий"),
             Text("Диаметр: ${edge.diam} м"),
             Container(
               width: 100,
@@ -441,7 +467,7 @@ class PipelineInformationCardWidget extends StatelessWidget {
                     },
                   )
                 : const SizedBox.shrink(),
-            (edge.type == GdsElementType.source)
+            (edge.type == GdsElementType.sink)
                 ? Container(
                     width: 100,
                     padding:
@@ -451,17 +477,39 @@ class PipelineInformationCardWidget extends StatelessWidget {
                       controller: sourceFlowValueTextController,
                       onChanged: (str) {
                         context.read<GdsPageBloc>().add(
-                            GdsSourceFLowElementChangeEvent(
+                            GdsSinkTargetFLowElementChangeEvent(
                                 edge,
                                 double.parse(sourceFlowValueTextController
                                     .value.text)));
                       },
                       decoration: const InputDecoration(
-                        labelText: 'Источник',
+                        labelText: 'Расход м^3/c',
                         border: OutlineInputBorder(),
                       ),
                     ),
                   )
+                : const SizedBox.shrink(),
+            (edge.type == GdsElementType.source)
+                ? Container(
+              width: 100,
+              padding:
+              EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+              child: TextField(
+                keyboardType: TextInputType.number,
+                controller: sourcePressureValueTextController,
+                onChanged: (str) {
+                  context.read<GdsPageBloc>().add(
+                      GdsSourcePressureElementChangeEvent(
+                          edge,
+                          double.parse(sourcePressureValueTextController
+                              .value.text)));
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Давление МПа',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            )
                 : const SizedBox.shrink(),
             (edge.type == GdsElementType.reducer)
                 ? Text(

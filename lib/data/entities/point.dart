@@ -3,8 +3,8 @@ import 'package:floor/floor.dart';
 class Point {
   @PrimaryKey(autoGenerate: false)
   final int id;
-  final double positionX;
-  final double positionY;
+  double positionX;
+  double positionY;
 
   Point({required this.id, required this.positionX, required this.positionY});
 

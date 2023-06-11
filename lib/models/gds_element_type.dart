@@ -10,4 +10,5 @@ enum GdsElementType {
   adorizer,
   meter,
   reducer,
+  filter,
 }

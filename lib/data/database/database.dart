@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:floor/floor.dart';
 import 'package:gas_distribution_station_model/data/dao/edge_dao.dart';
 import 'package:gas_distribution_station_model/data/dao/point_dao.dart';
@@ -15,16 +17,16 @@ abstract class AppDatabase extends FloorDatabase {
 
   EdgeDAO get edgeDAO;
 
-  Future<void> replaceDBDataFromFile(String filename) async {
+  Future<void> replaceDBDataFromFile(File file) async {
     await pointDAO.deleteAllPoints();
     await edgeDAO.deleteAllEdges();
-    var data = FileManager.readPointsAndEdgesFromFile(filename);
+    var data = FileManager.readPointsAndEdgesFromFile(file);
     await pointDAO.insertPoints(data.item1);
     await edgeDAO.insertEdges(data.item2);
   }
-  Future<void> writeDBDataToFile(String filename) async {
+  Future<File> writeDBDataToFile(String filename) async {
     var points = await pointDAO.getAllPoints();
     var edges = await edgeDAO.getAllEdges();
-    FileManager.writePointsAndEdgesToFile(points,edges,filename);
+    return FileManager.writePointsAndEdgesToFile(points,edges,filename);
   }
 }

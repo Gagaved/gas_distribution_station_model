@@ -74,11 +74,19 @@ class GdsLenElementChangeEvent extends GdsEvent {
   GdsLenElementChangeEvent(this.element, this.value);
 }
 
-class GdsSourceFLowElementChangeEvent extends GdsEvent {
+class GdsSinkTargetFLowElementChangeEvent extends GdsEvent {
   final GraphEdge element;
   final double value;
 
-  GdsSourceFLowElementChangeEvent(this.element, this.value);
+  GdsSinkTargetFLowElementChangeEvent(this.element, this.value);
+}
+
+
+class GdsSourcePressureElementChangeEvent extends GdsEvent {
+  final GraphEdge element;
+  final double value;
+
+  GdsSourcePressureElementChangeEvent(this.element, this.value);
 }
 
 class GdsDeselectElementEvent extends GdsEvent {}
@@ -89,5 +97,6 @@ class GdsCreateElementEvent extends GdsEvent {
   GdsCreateElementEvent(this.type);
 }
 
-class SaveGdsEvent extends GdsEvent {}
-class LoadGdsEvent extends GdsEvent {}
+class ExportGdsToFileEvent extends GdsEvent {}
+class LoadFromFileEvent extends GdsEvent {}
+class LoadFromDBEvent extends GdsEvent{}

@@ -6,8 +6,8 @@ class Edge {
   final int p1id;
   final int p2id;
   final int typeId;
-  final double diam;
-  final double len;
+  double diam;
+  double len;
 
   Edge({
     required this.id,

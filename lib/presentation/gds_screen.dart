@@ -18,10 +18,12 @@ class GdsScreenWidget extends StatelessWidget {
         child: BlocBuilder<GdsPageBloc, GdsState>(
           builder: (context, state) {
             var listOfElements = <Widget>[];
+            //listOfElements.add(Image.asset("assets/GRS.png"));
+            listOfElements.add(Container(color: Colors.black12,));
             if (state is GdsInitial) {
               return const CircularProgressIndicator();
             }
-            if(state is GdsLoadedState){
+            if (state is GdsLoadedState) {
               return const Center(child: CircularProgressIndicator());
             }
             if (state is GdsMainState) {
@@ -64,79 +66,83 @@ class GdsScreenWidget extends StatelessWidget {
                     ),
                   ),
                   Expanded(
-                    child: InteractiveViewer(
-                      maxScale: 2.5,
-                      minScale: 0.5,
-                      transformationController: _transformationController,
-                      child: Stack(children: listOfElements),
-                    ),
-                  ),
-                  Column(
-                    mainAxisAlignment:MainAxisAlignment.end,
-                    children: [
-                      Row(
+                    child: Stack(
+                        alignment: AlignmentDirectional.bottomEnd,
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                context
-                                    .read<GdsPageBloc>()
-                                    .add(SaveGdsEvent());
-                              },
-                              child: Row(
-                                children: const [
-                                  Icon(Icons.save),
+                          InteractiveViewer(
+                            maxScale: 2.5,
+                            minScale: 0.5,
+                            transformationController:
+                                _transformationController,
+                            child: Stack(children: listOfElements),
+                          ),
+                          Container(
+                            width: 200,
+                              child:Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
                                   Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text("Cохранить систему"),
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        context
+                                            .read<GdsPageBloc>()
+                                            .add(ExportGdsToFileEvent());
+                                      },
+                                      child: const Row(
+                                        children: [
+                                          Icon(Icons.save),
+                                          Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: Text("Экпорт"),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                context
-                                    .read<GdsPageBloc>()
-                                    .add(LoadGdsEvent());
-                              },
-                              child: Row(
-                                children: const [
-                                  Icon(Icons.sim_card_download),
                                   Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text("загрузить систему"),
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        context
+                                            .read<GdsPageBloc>()
+                                            .add(LoadFromFileEvent());
+                                      },
+                                      child: const Row(
+                                        children: [
+                                          Icon(Icons.upload_file_sharp),
+                                          Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: Text("Импорт"),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        context
+                                            .read<GdsPageBloc>()
+                                            .add(CalculateFlowButtonPressGdsEvent());
+                                      },
+                                      child: const Row(
+                                        children: [
+                                          Icon(Icons.science),
+                                          Padding(
+                                            padding: EdgeInsets.all(8.0),
+                                            child: Text("Расчитать"),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
                                 ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            context
-                                .read<GdsPageBloc>()
-                                .add(CalculateFlowButtonPressGdsEvent());
-                          },
-                          child: Row(
-                            children: const [
-                              Icon(Icons.science),
-                              Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Text("Расчитать систему"),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    ],
-                  )
+                              )
+                          )
+                        ]),
+                  ),
                 ],
               ));
             } else {
@@ -164,6 +170,8 @@ Widget getWidgetFromEdge(GraphEdge edge, {required bool isSelect}) {
       return PipelineReducerWidget(edge: edge, isSelect: isSelect);
     case GdsElementType.meter:
       return PipelineMeterWidget(edge: edge, isSelect: isSelect);
+    case GdsElementType.filter:
+      return PipelineFilterWidget(edge: edge, isSelect: isSelect);
     default:
       return PipelineSegmentWidget(edge: edge, isSelect: isSelect);
   }
