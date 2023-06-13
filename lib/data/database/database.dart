@@ -20,9 +20,9 @@ abstract class AppDatabase extends FloorDatabase {
   Future<void> replaceDBDataFromFile(File file) async {
     await pointDAO.deleteAllPoints();
     await edgeDAO.deleteAllEdges();
-    var data = FileManager.readPointsAndEdgesFromFile(file);
-    await pointDAO.insertPoints(data.item1);
-    await edgeDAO.insertEdges(data.item2);
+    var (points,edges) = FileManager.readPointsAndEdgesFromFile(file);
+    await pointDAO.insertPoints(points);
+    await edgeDAO.insertEdges(edges);
   }
   Future<File> writeDBDataToFile(String filename) async {
     var points = await pointDAO.getAllPoints();

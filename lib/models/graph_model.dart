@@ -4,7 +4,7 @@ import 'dart:ui';
 
 import 'package:gas_distribution_station_model/data/entities/edge.dart';
 import 'package:gas_distribution_station_model/data/entities/point.dart';
-import 'package:gas_distribution_station_model/models/gds_element_type.dart';
+import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
 import 'package:tuple/tuple.dart';
 
 extension MyFancyList<T> on List<T> {
@@ -77,7 +77,7 @@ class GraphPipeline {
   ///
   ///
   /// связывает две точки
-  void link(GraphPoint p1, GraphPoint p2, double diam, GdsElementType type,
+  void link(GraphPoint p1, GraphPoint p2, double diam, PipelineElementType type,
       double len,
       [double sourceFlow = 0.0]) {
     var newEdge = GraphEdge(
@@ -98,7 +98,7 @@ class GraphPipeline {
     }
     ;
     edges[key] = newEdge;
-    if (type == GdsElementType.source) {
+    if (type == PipelineElementType.source) {
       p1.pressure = newEdge.pressure;
       p2.pressure = newEdge.pressure;
     }
@@ -183,7 +183,7 @@ class GraphPipeline {
     }
 
     /// для точки потребления:
-    if (lastEdge != null && lastEdge.type == GdsElementType.sink) {
+    if (lastEdge != null && lastEdge.type == PipelineElementType.sink) {
       double demandReminder = lastEdge.targetFlow - lastEdge.flow;
       if (flow != 0) {
         lastEdge.flowDirection = point;
@@ -265,7 +265,7 @@ class GraphPipeline {
       return;
     }
     switch (lastEdge?.type) {
-      case GdsElementType.reducer:
+      case PipelineElementType.reducer:
         {
           if (pressureFromLastEdge >= lastEdge!.targetPressure) {
             point.pressure = lastEdge.targetPressure;
@@ -305,7 +305,7 @@ class GraphPipeline {
     }
     lastEdge.pressure = point.pressure;
 
-    if (lastEdge.type == GdsElementType.reducer) {}
+    if (lastEdge.type == PipelineElementType.reducer) {}
 
     List<GraphEdge> lockEdges = [];
     List<GraphPoint> availableDestinations =
@@ -355,11 +355,11 @@ class GraphPipeline {
     if (summ2 != 0) lastEdge!.temperature = summ1 / summ2;
 
     switch (lastEdge?.type) {
-      case GdsElementType.heater:
+      case PipelineElementType.heater:
         double dT = lastEdge!.heaterPower! / (c * lastEdge.flow);
         lastEdge.temperature = lastEdge.temperature! + dT;
         break;
-      case GdsElementType.reducer:
+      case PipelineElementType.reducer:
         double dT = -(lastEdge!.flowStart!.pressure -
                 lastEdge.flowDirection!.pressure) /
             1000000 *
@@ -382,9 +382,9 @@ class GraphPipeline {
       List<GraphEdge> sinks = [];
       for (var edge in edges.values) {
         edge.heaterPower = 400; //todo() remove this
-        if (edge.type == GdsElementType.source) {
+        if (edge.type == PipelineElementType.source) {
           sourceEdge = edge;
-        } else if (edge.type == GdsElementType.sink) {
+        } else if (edge.type == PipelineElementType.sink) {
           sinks.add(edge);
         } else {
           edge.temperature = null;
@@ -471,7 +471,7 @@ class GraphEdge extends Edge {
             typeId: edge.typeId) {
     p1 = graphPipeline!.getPointById(p1id)!;
     p2 = graphPipeline!.getPointById(p2id)!;
-    type = GdsElementType.values[typeId];
+    type = PipelineElementType.values[typeId];
     sourceFlow = flow;
     _crossSection = pi * pow(diam / 2, 2);
   }
@@ -486,7 +486,7 @@ class GraphEdge extends Edge {
       required this.graphPipeline}) {
     p1 = graphPipeline!.getPointById(p1id)!;
     p2 = graphPipeline!.getPointById(p2id)!;
-    type = GdsElementType.values[typeId];
+    type = PipelineElementType.values[typeId];
     sourceFlow = flow;
     _crossSection = pi * pow(diam / 2, 2);
   }
@@ -534,7 +534,7 @@ class GraphEdge extends Edge {
     return p1;
   }
 
-  late GdsElementType type;
+  late PipelineElementType type;
 
   ///
   /// источник потока

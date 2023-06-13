@@ -1,10 +1,9 @@
 import 'dart:math';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/material.dart';
-import 'package:gas_distribution_station_model/logic/gds_bloc.dart';
-import 'package:gas_distribution_station_model/models/GDS_graph_model.dart';
-import 'package:gas_distribution_station_model/presentation/styles.dart';
-
+import 'package:gas_distribution_station_model/logic/editor_page/editor_bloc.dart';
+import 'package:gas_distribution_station_model/models/graph_model.dart';
+import 'package:gas_distribution_station_model/globals.dart' as globals;
 double _getAngle(Offset p1, Offset p2) {
   double x1 = p1.dx - min(p1.dx, p2.dx);
   double y1 = p1.dy - min(p1.dy, p2.dy);
@@ -98,20 +97,20 @@ class PipelineWidget extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () {
                     context
-                        .read<GdsPageBloc>()
-                        .add(GdsSelectElementEvent(edge));
+                        .read<EditorPageBloc>()
+                        .add(GdsSelectElementEditorEvent(edge));
                   },
                   onPanUpdate: (d) {
                     if (isSelect) {
                       context
-                          .read<GdsPageBloc>()
-                          .add(GdsPointMoveEvent(edge.p1.id, d.delta));
+                          .read<EditorPageBloc>()
+                          .add(GdsPointMoveEditorEvent(edge.p1.id, d.delta));
                     }
                   },
                   child: Container(
                     width: dragPointSize,
                     height: dragPointSize,
-                    color: isSelect ? AdditionalColors.planBorderElement : null,
+                    color: isSelect ? globals.AdditionalColors.planBorderElement : null,
                   ),
                 ),
               ),
@@ -125,20 +124,20 @@ class PipelineWidget extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () {
                     context
-                        .read<GdsPageBloc>()
-                        .add(GdsSelectElementEvent(edge));
+                        .read<EditorPageBloc>()
+                        .add(GdsSelectElementEditorEvent(edge));
                   },
                   onPanUpdate: (d) {
                     if (isSelect) {
                       context
-                          .read<GdsPageBloc>()
-                          .add(GdsPointMoveEvent(edge.p2.id, d.delta));
+                          .read<EditorPageBloc>()
+                          .add(GdsPointMoveEditorEvent(edge.p2.id, d.delta));
                     }
                   },
                   child: Container(
                     width: dragPointSize,
                     height: dragPointSize,
-                    color: isSelect ? AdditionalColors.planBorderElement : null,
+                    color: isSelect ? globals.AdditionalColors.planBorderElement : null,
                   ),
                 ),
               ),
@@ -152,14 +151,14 @@ class PipelineWidget extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () {
                     context
-                        .read<GdsPageBloc>()
-                        .add(GdsSelectElementEvent(edge));
+                        .read<EditorPageBloc>()
+                        .add(GdsSelectElementEditorEvent(edge));
                   },
                   onPanUpdate: (d) {
                     if (isSelect) {
                       context
-                          .read<GdsPageBloc>()
-                          .add(GdsElementMoveEvent(id, d.delta, d.delta));
+                          .read<EditorPageBloc>()
+                          .add(GdsElementMoveEditorEvent(id, d.delta, d.delta));
                     }
                   },
                   child: RotatedBox(
@@ -172,7 +171,7 @@ class PipelineWidget extends StatelessWidget {
                           child: Container(
                             width: 10,
                             color: isSelect
-                                ? AdditionalColors.debugTranslucent
+                                ? globals.AdditionalColors.debugTranslucent
                                 : Colors.black26,
                           ),
                         ),
@@ -192,14 +191,14 @@ class PipelineWidget extends StatelessWidget {
                       child: GestureDetector(
                         onTap: () {
                           context
-                              .read<GdsPageBloc>()
-                              .add(GdsSelectElementEvent(edge));
+                              .read<EditorPageBloc>()
+                              .add(GdsSelectElementEditorEvent(edge));
                         },
                         onPanUpdate: (d) {
                           if (isSelect) {
                             context
-                                .read<GdsPageBloc>()
-                                .add(GdsElementMoveEvent(id, d.delta, d.delta));
+                                .read<EditorPageBloc>()
+                                .add(GdsElementMoveEditorEvent(id, d.delta, d.delta));
                           }
                         },
                         child: RotatedBox(

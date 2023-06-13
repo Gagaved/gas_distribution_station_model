@@ -4,88 +4,88 @@ import 'dart:io';
 import 'package:bloc/bloc.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/gestures.dart';
-import 'package:gas_distribution_station_model/models/GDS_graph_model.dart';
-import 'package:gas_distribution_station_model/models/gds_element_type.dart';
+import 'package:gas_distribution_station_model/models/graph_model.dart';
+import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
 import 'package:meta/meta.dart';
 import 'package:gas_distribution_station_model/globals.dart' as globals;
 
-part 'gds_event.dart';
+part 'editor_event.dart';
 
-part 'gds_state.dart';
+part 'editor_state.dart';
 
-class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
+class EditorPageBloc extends Bloc<EditorEvent, GdsState> {
   GraphPipeline? graph;
   GraphEdge? _selectedElement;
-  GdsElementType? _selectedType;
+  PipelineElementType? _selectedType;
   Map<Offset, List<GraphPoint>> magneticGrid = {};
   CalculateStatus calculateStatus = CalculateStatus.complete;
 
-  GdsPageBloc() : super(GdsInitial()) {
-    on<AddElementButtonPressGdsEvent>((event, emit) {
+  EditorPageBloc() : super(EditorInitialState()) {
+    on<AddElementButtonPressEditorEvent>((event, emit) {
       _addNewEdge(event.diam);
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
-    on<DeleteElementButtonPressGdsEvent>((event, emit) {
+    on<DeleteElementButtonPressEvent>((event, emit) {
       _deleteElement(_selectedElement!);
       _selectedElement = null;
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
-    on<CalculateFlowButtonPressGdsEvent>((event, emit) async {
+    on<CalculateFlowButtonPressEvent>((event, emit) async {
       CalculateStatus.process;
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, CalculateStatus.process));
       await graph!.calculatePipeline();
       calculateStatus = CalculateStatus.complete;
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
-    on<GdsSelectElementEvent>((event, emit) {
+    on<GdsSelectElementEditorEvent>((event, emit) {
       if (_selectedElement == event.element) {
         _selectedElement = null;
       } else {
         _selectedElement = event.element;
       }
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
     on<GdsDeselectElementEvent>((event, emit) {
       _selectedElement = null;
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
-    on<GdsElementMoveEvent>((event, emit) {
+    on<GdsElementMoveEditorEvent>((event, emit) {
       _selectedElement!.p1.position += event
           .p1; //Offset(_selectedElement!.p1.dx+event.p1.dx,_selectedElement!.p1.dy+event.p1.dy);
       _selectedElement!.p2.position += event
           .p2; // Offset(_selectedElement!.p2.dx+event.p2.dx,_selectedElement!.p2.dy+event.p2.dy);
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
-    on<GdsPointMoveEvent>((event, emit) {
+    on<GdsPointMoveEditorEvent>((event, emit) {
       if (graph!.points[event.pointId] != null) {
         GraphPoint p = graph!.points[event.pointId]!;
         p.position += event.delta;
         GraphPoint? otherPoint = _magnatePoint(p);
         otherPoint != null ? graph!.mergePoints(p, otherPoint) : 0;
-        emit(GdsMainState(
+        emit(EditorMainState(
             graph!, _selectedElement, _selectedType!, calculateStatus));
       }
     });
-    on<ChangeSelectedTypeInPanelEvent>((event, emit) {
+    on<ChangeSelectedTypeInPanelEditorEvent>((event, emit) {
       _selectedType = event.type;
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
     on<GdsThroughputFLowPercentageElementChangeEvent>((event, emit) {
       event.element.changeThroughputFlowPercentage(event.value);
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
     on<GdsHeaterPowerElementChangeEvent>((event, emit) {
       event.element.heaterPower = (event.value);
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
 
@@ -103,7 +103,7 @@ class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
     });
     on<GdsTargetPressureReducerElementChangeEvent>((event, emit) {
       event.element.targetPressure = event.value;
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
     on<ExportGdsToFileEvent>((event, emit) {
@@ -111,18 +111,18 @@ class GdsPageBloc extends Bloc<GdsEvent, GdsState> {
     });
 
     on<LoadFromFileEvent>((event, emit) async {
-      emit(GdsLoadingState());
+      emit(EditorLoadingState());
       await loadGdsFromFile();
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
     on<LoadFromDBEvent>((event, emit) async {
-      emit(GdsLoadingState());
+      emit(EditorLoadingState());
       await loadGdsFromDb();
-      emit(GdsMainState(
+      emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
-    _selectedType = GdsElementType.segment;
+    _selectedType = PipelineElementType.segment;
     add(LoadFromDBEvent());
   }
 

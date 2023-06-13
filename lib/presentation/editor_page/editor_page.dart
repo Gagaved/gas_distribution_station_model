@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gas_distribution_station_model/logic/gds_bloc.dart';
-import 'package:gas_distribution_station_model/models/GDS_graph_model.dart';
-import 'package:gas_distribution_station_model/models/gds_element_type.dart';
-import 'package:gas_distribution_station_model/presentation/gds_element.dart';
+import 'package:gas_distribution_station_model/logic/editor_page/editor_bloc.dart';
+import 'package:gas_distribution_station_model/models/graph_model.dart';
+import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
+import 'package:gas_distribution_station_model/presentation/editor_page/pipeline_element.dart';
 
-class GdsScreenWidget extends StatelessWidget {
-  const GdsScreenWidget({super.key});
+class EditorPageWidget extends StatelessWidget {
+  const EditorPageWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<GdsPageBloc>(
-        create: (context) => GdsPageBloc(),
-        child: BlocBuilder<GdsPageBloc, GdsState>(
+    return BlocProvider<EditorPageBloc>(
+        create: (context) => EditorPageBloc(),
+        child: BlocBuilder<EditorPageBloc, GdsState>(
           builder: (context, state) {
-            if (state is GdsInitial) {
+            if (state is EditorInitialState) {
               return const CircularProgressIndicator();
             }
-            if (state is GdsLoadingState) {
+            if (state is EditorLoadingState) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (state is GdsMainState) {
+            if (state is EditorMainState) {
               return Scaffold(
                   body: Row(
                 children: [
@@ -45,7 +45,7 @@ class GdsScreenWidget extends StatelessWidget {
 }
 
 class _EditorToolsWidget extends StatelessWidget {
-  final GdsMainState state;
+  final EditorMainState state;
 
   const _EditorToolsWidget({required this.state});
 
@@ -67,7 +67,7 @@ class _EditorToolsWidget extends StatelessWidget {
 }
 
 class _PipelinePlanWidget extends StatelessWidget {
-  final GdsMainState state;
+  final EditorMainState state;
 
   static final TransformationController _transformationController =
       TransformationController();
@@ -107,7 +107,7 @@ class _PipelinePlanWidget extends StatelessWidget {
                   padding: const EdgeInsets.all(8.0),
                   child: ElevatedButton(
                     onPressed: () {
-                      context.read<GdsPageBloc>().add(ExportGdsToFileEvent());
+                      context.read<EditorPageBloc>().add(ExportGdsToFileEvent());
                     },
                     child: const Row(
                       children: [
@@ -124,7 +124,7 @@ class _PipelinePlanWidget extends StatelessWidget {
                   padding: const EdgeInsets.all(8.0),
                   child: ElevatedButton(
                     onPressed: () {
-                      context.read<GdsPageBloc>().add(LoadFromFileEvent());
+                      context.read<EditorPageBloc>().add(LoadFromFileEvent());
                     },
                     child: const Row(
                       children: [
@@ -142,8 +142,8 @@ class _PipelinePlanWidget extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () {
                       context
-                          .read<GdsPageBloc>()
-                          .add(CalculateFlowButtonPressGdsEvent());
+                          .read<EditorPageBloc>()
+                          .add(CalculateFlowButtonPressEvent());
                     },
                     child: const Row(
                       children: [
@@ -173,22 +173,22 @@ class _PipelinePlanWidget extends StatelessWidget {
 
 Widget _getWidgetFromEdge(GraphEdge edge, {required bool isSelect}) {
   switch (edge.type) {
-    case GdsElementType.valve:
+    case PipelineElementType.valve:
       return PipelineValveWidget(edge: edge, isSelect: isSelect);
-    case GdsElementType.segment:
+    case PipelineElementType.segment:
       return PipelineSegmentWidget(edge: edge, isSelect: isSelect);
-    case GdsElementType.percentageValve:
+    case PipelineElementType.percentageValve:
       return PipelinePercentageValveWidget(
         edge: edge,
         isSelect: isSelect,
       );
-    case GdsElementType.heater:
+    case PipelineElementType.heater:
       return PipelineHeaterWidget(edge: edge, isSelect: isSelect);
-    case GdsElementType.reducer:
+    case PipelineElementType.reducer:
       return PipelineReducerWidget(edge: edge, isSelect: isSelect);
-    case GdsElementType.meter:
+    case PipelineElementType.meter:
       return PipelineMeterWidget(edge: edge, isSelect: isSelect);
-    case GdsElementType.filter:
+    case PipelineElementType.filter:
       return PipelineFilterWidget(edge: edge, isSelect: isSelect);
     default:
       return PipelineSegmentWidget(edge: edge, isSelect: isSelect);
@@ -203,13 +203,13 @@ class _PipelinePanelWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<GdsPageBloc, GdsState>(
+    return BlocBuilder<EditorPageBloc, GdsState>(
       builder: (context, state) {
-        if (state is GdsMainState) {
+        if (state is EditorMainState) {
           if (state.selectedEdge != null) {
             _flowFieldController.text = state.selectedEdge!.diam.toString();
           }
-          var edgeTypes = GdsElementType.values;
+          var edgeTypes = PipelineElementType.values;
           return Card(
             elevation: 10,
             child: SizedBox(
@@ -227,8 +227,8 @@ class _PipelinePanelWidget extends StatelessWidget {
                         itemBuilder: (BuildContext con, int index) {
                           return GestureDetector(
                               onTap: () {
-                                context.read<GdsPageBloc>().add(
-                                    ChangeSelectedTypeInPanelEvent(
+                                context.read<EditorPageBloc>().add(
+                                    ChangeSelectedTypeInPanelEditorEvent(
                                         edgeTypes[index]));
                               },
                               child: Container(
@@ -274,8 +274,8 @@ class _PipelinePanelWidget extends StatelessWidget {
                       padding: const EdgeInsets.all(10),
                       child: ElevatedButton(
                         onPressed: () {
-                          context.read<GdsPageBloc>().add(
-                              AddElementButtonPressGdsEvent(
+                          context.read<EditorPageBloc>().add(
+                              AddElementButtonPressEditorEvent(
                                   double.parse(_flowFieldController.text)));
                         },
                         child: Text('Добавить ${state.selectedType}'),
@@ -324,7 +324,7 @@ class _PipelineInformationCardWidget extends StatelessWidget {
             Text("Давление: ${(edge.pressure / 1000000).toStringAsFixed(4)} МПа"),
             edge.temperature!=null?Text("Тепература: ${(edge.temperature! - 273.15).toStringAsFixed(2)} °C) "):const SizedBox.shrink(),
             Text("Диаметр: ${edge.diam} м"),
-            (edge.type == GdsElementType.valve)
+            (edge.type == PipelineElementType.valve)
                 ? MaterialButton(
               color: edge.openPercentage == 0
                   ? Colors.redAccent
@@ -332,7 +332,7 @@ class _PipelineInformationCardWidget extends StatelessWidget {
               child: Text(
                   edge.openPercentage == 0 ? "Закрыт" : "Открыт"),
               onPressed: () {
-                context.read<GdsPageBloc>().add(
+                context.read<EditorPageBloc>().add(
                     GdsThroughputFLowPercentageElementChangeEvent(
                         edge, edge.openPercentage == 0 ? 1 : 0));
               },
@@ -345,7 +345,7 @@ class _PipelineInformationCardWidget extends StatelessWidget {
                 keyboardType: TextInputType.number,
                 controller: lenValueTextController,
                 onChanged: (str) {
-                  context.read<GdsPageBloc>().add(
+                  context.read<EditorPageBloc>().add(
                       GdsLenElementChangeEvent(
                           edge,
                           double.parse(
@@ -357,24 +357,24 @@ class _PipelineInformationCardWidget extends StatelessWidget {
                 ),
               ),
             ),
-            (edge.type == GdsElementType.percentageValve)
+            (edge.type == PipelineElementType.percentageValve)
                 ? Text(
                 "Открыт на ${(edge.openPercentage * 100).toInt()}%")
                 : const SizedBox.shrink(),
-            (edge.type == GdsElementType.percentageValve)
+            (edge.type == PipelineElementType.percentageValve)
                 ? Slider(
               value: edge.openPercentage * 100,
               max: 100,
               divisions: 10,
               label: edge.openPercentage.toString(),
               onChanged: (double value) {
-                context.read<GdsPageBloc>().add(
+                context.read<EditorPageBloc>().add(
                     GdsThroughputFLowPercentageElementChangeEvent(
                         edge, value / 100));
               },
             )
                 : const SizedBox.shrink(),
-            (edge.type == GdsElementType.sink)
+            (edge.type == PipelineElementType.sink)
                 ? Container(
               width: 150,
               padding:
@@ -383,7 +383,7 @@ class _PipelineInformationCardWidget extends StatelessWidget {
                 keyboardType: TextInputType.number,
                 controller: sinkFlowValueTextController,
                 onChanged: (str) {
-                  context.read<GdsPageBloc>().add(
+                  context.read<EditorPageBloc>().add(
                       GdsSinkTargetFLowElementChangeEvent(
                           edge,
                           double.parse(sinkFlowValueTextController
@@ -396,7 +396,7 @@ class _PipelineInformationCardWidget extends StatelessWidget {
               ),
             )
                 : const SizedBox.shrink(),
-            (edge.type == GdsElementType.source)
+            (edge.type == PipelineElementType.source)
                 ? Container(
               width: 150,
               padding:
@@ -405,7 +405,7 @@ class _PipelineInformationCardWidget extends StatelessWidget {
                 keyboardType: TextInputType.number,
                 controller: sourcePressureValueTextController,
                 onChanged: (str) {
-                  context.read<GdsPageBloc>().add(
+                  context.read<EditorPageBloc>().add(
                       GdsSourcePressureElementChangeEvent(
                           edge,
                           double.parse(sourcePressureValueTextController
@@ -418,11 +418,11 @@ class _PipelineInformationCardWidget extends StatelessWidget {
               ),
             )
                 : const SizedBox.shrink(),
-            (edge.type == GdsElementType.reducer)
+            (edge.type == PipelineElementType.reducer)
                 ? Text(
                 "Давление на которое\n настроен редуктор: ${edge.targetPressure / 1000000} МПа")
                 : const SizedBox.shrink(),
-            (edge.type == GdsElementType.heater)
+            (edge.type == PipelineElementType.heater)
                 ? Slider(
               value: edge.heaterPower!,
               max: 1000,
@@ -430,13 +430,13 @@ class _PipelineInformationCardWidget extends StatelessWidget {
               divisions: 10,
               label: "Мощность подогревателя: ${edge.heaterPower} МВт",
               onChanged: (double value) {
-                context.read<GdsPageBloc>().add(
+                context.read<EditorPageBloc>().add(
                     GdsHeaterPowerElementChangeEvent(
                         edge, value));
               },
             )
                 : const SizedBox.shrink(),
-            (edge.type == GdsElementType.reducer)
+            (edge.type == PipelineElementType.reducer)
                 ? Slider(
               value: edge.targetPressure / 1000000,
               max: 2,
@@ -444,7 +444,7 @@ class _PipelineInformationCardWidget extends StatelessWidget {
               divisions: 10,
               label: "${edge.targetPressure / 1000000}МПа",
               onChanged: (double value) {
-                context.read<GdsPageBloc>().add(
+                context.read<EditorPageBloc>().add(
                     GdsTargetPressureReducerElementChangeEvent(
                         edge, value * 1000000));
               },
@@ -455,8 +455,8 @@ class _PipelineInformationCardWidget extends StatelessWidget {
                 child: MaterialButton(
                   onPressed: () {
                     context
-                        .read<GdsPageBloc>()
-                        .add(DeleteElementButtonPressGdsEvent());
+                        .read<EditorPageBloc>()
+                        .add(DeleteElementButtonPressEvent());
                   },
                   color: Colors.red,
                   child: const Text('Удалить'),

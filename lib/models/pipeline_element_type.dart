@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
-
-enum GdsElementType {
+enum PipelineElementType {
   segment,
   valve,
   percentageValve,
