@@ -8,152 +8,170 @@ import 'package:gas_distribution_station_model/presentation/gds_element.dart';
 class GdsScreenWidget extends StatelessWidget {
   const GdsScreenWidget({super.key});
 
-  static final TransformationController _transformationController =
-      TransformationController();
-
   @override
   Widget build(BuildContext context) {
     return BlocProvider<GdsPageBloc>(
         create: (context) => GdsPageBloc(),
         child: BlocBuilder<GdsPageBloc, GdsState>(
           builder: (context, state) {
-            var listOfElements = <Widget>[];
-            //listOfElements.add(Image.asset("assets/GRS.png"));
-            listOfElements.add(Container(color: Colors.black12,));
             if (state is GdsInitial) {
               return const CircularProgressIndicator();
             }
-            if (state is GdsLoadedState) {
+            if (state is GdsLoadingState) {
               return const Center(child: CircularProgressIndicator());
             }
             if (state is GdsMainState) {
-              var edgesMap = (state).graph.edges;
-              for (GraphEdge edge in edgesMap.values) {
-                if (edge != state.selectedEdge) {
-                  listOfElements.add(getWidgetFromEdge(edge, isSelect: false));
-                }
-              }
-              if (state.selectedEdge != null) {
-                listOfElements.add(
-                    getWidgetFromEdge(state.selectedEdge!, isSelect: true));
-                // listOfElements.add(PipelineInformationCardWidget(
-                //   edge: state.selectedEdge!,
-                // ));
-              }
-              // _transformationController =
-              //     TransformationController(_transformationController.value);
-              // _transformationController.addListener(() {
-              //   context
-              //       .read<GdsPageBloc>()
-              //       .add(ScaleChangeEvent());
-              // });
               return Scaffold(
                   body: Row(
                 children: [
-                  Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-                    state.selectedEdge != null
-                        ? PipelineInformationCardWidget(
-                            edge: state.selectedEdge!,
-                          )
-                        : const SizedBox.shrink(),
-                    const PipelinePanelWidget()
-                  ]),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: Container(
-                      color: Colors.grey,
-                      width: 0.5,
-                    ),
-                  ),
-                  Expanded(
-                    child: Stack(
-                        alignment: AlignmentDirectional.bottomEnd,
-                        children: [
-                          InteractiveViewer(
-                            maxScale: 2.5,
-                            minScale: 0.5,
-                            transformationController:
-                                _transformationController,
-                            child: Stack(children: listOfElements),
-                          ),
-                          Container(
-                            width: 200,
-                              child:Column(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        context
-                                            .read<GdsPageBloc>()
-                                            .add(ExportGdsToFileEvent());
-                                      },
-                                      child: const Row(
-                                        children: [
-                                          Icon(Icons.save),
-                                          Padding(
-                                            padding: EdgeInsets.all(8.0),
-                                            child: Text("Экпорт"),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        context
-                                            .read<GdsPageBloc>()
-                                            .add(LoadFromFileEvent());
-                                      },
-                                      child: const Row(
-                                        children: [
-                                          Icon(Icons.upload_file_sharp),
-                                          Padding(
-                                            padding: EdgeInsets.all(8.0),
-                                            child: Text("Импорт"),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        context
-                                            .read<GdsPageBloc>()
-                                            .add(CalculateFlowButtonPressGdsEvent());
-                                      },
-                                      child: const Row(
-                                        children: [
-                                          Icon(Icons.science),
-                                          Padding(
-                                            padding: EdgeInsets.all(8.0),
-                                            child: Text("Расчитать"),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                ],
-                              )
-                          )
-                        ]),
+                  ///
+                  ///
+                  /// Панель иструментов редактора
+                  _EditorToolsWidget(state: state),
+                  ///
+                  ///
+                  /// Рабочее поле редактора на котором отображается элементы редактора
+                  _PipelinePlanWidget(
+                    state: state,
                   ),
                 ],
               ));
             } else {
-              return ErrorWidget("unexpected state: ${state}");
+              return ErrorWidget("unexpected state: $state");
             }
           },
         ));
   }
 }
 
-Widget getWidgetFromEdge(GraphEdge edge, {required bool isSelect}) {
+class _EditorToolsWidget extends StatelessWidget {
+  final GdsMainState state;
+
+  const _EditorToolsWidget({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Column(mainAxisAlignment: MainAxisAlignment.end, children: [
+          state.selectedEdge != null
+              ? _PipelineInformationCardWidget(
+                  edge: state.selectedEdge!,
+                )
+              : const SizedBox.shrink(),
+          const _PipelinePanelWidget()
+        ]),
+      ],
+    );
+  }
+}
+
+class _PipelinePlanWidget extends StatelessWidget {
+  final GdsMainState state;
+
+  static final TransformationController _transformationController =
+      TransformationController();
+
+  const _PipelinePlanWidget({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    var listOfElements = <Widget>[];
+    listOfElements.add(Container(
+      color: Colors.black12,
+    ));
+    var edgesMap = (state).graph.edges;
+    for (GraphEdge edge in edgesMap.values) {
+      if (edge != state.selectedEdge) {
+        listOfElements.add(_getWidgetFromEdge(edge, isSelect: false));
+      }
+    }
+    if (state.selectedEdge != null) {
+      listOfElements
+          .add(_getWidgetFromEdge(state.selectedEdge!, isSelect: true));
+    }
+    return Expanded(
+      child: Stack(alignment: AlignmentDirectional.bottomEnd, children: [
+        InteractiveViewer(
+          maxScale: 2.5,
+          minScale: 0.5,
+          transformationController: _transformationController,
+          child: Stack(children: listOfElements),
+        ),
+        SizedBox(
+            width: 200,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      context.read<GdsPageBloc>().add(ExportGdsToFileEvent());
+                    },
+                    child: const Row(
+                      children: [
+                        Icon(Icons.save),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text("Экпорт"),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      context.read<GdsPageBloc>().add(LoadFromFileEvent());
+                    },
+                    child: const Row(
+                      children: [
+                        Icon(Icons.upload_file_sharp),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text("Импорт"),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      context
+                          .read<GdsPageBloc>()
+                          .add(CalculateFlowButtonPressGdsEvent());
+                    },
+                    child: const Row(
+                      children: [
+                        Icon(Icons.science),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text("Расчитать"),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              ],
+            )),
+        state.calculateStatus == CalculateStatus.process
+            ? Expanded(
+                child: Container(
+                  color: Colors.black38,
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+              )
+            : const SizedBox.shrink()
+      ]),
+    );
+  }
+}
+
+Widget _getWidgetFromEdge(GraphEdge edge, {required bool isSelect}) {
   switch (edge.type) {
     case GdsElementType.valve:
       return PipelineValveWidget(edge: edge, isSelect: isSelect);
@@ -177,8 +195,8 @@ Widget getWidgetFromEdge(GraphEdge edge, {required bool isSelect}) {
   }
 }
 
-class PipelinePanelWidget extends StatelessWidget {
-  const PipelinePanelWidget({Key? key}) : super(key: key);
+class _PipelinePanelWidget extends StatelessWidget {
+  const _PipelinePanelWidget({Key? key}) : super(key: key);
   static final TextEditingController _flowFieldController =
       TextEditingController();
   static final ScrollController _scrollController = ScrollController();
@@ -252,32 +270,16 @@ class PipelinePanelWidget extends StatelessWidget {
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  state.selectedEdge == null
-                      ? Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              context.read<GdsPageBloc>().add(
-                                  AddElementButtonPressGdsEvent(
-                                      double.parse(_flowFieldController.text)));
-                            },
-                            child: Text('Добавить ${state.selectedType}'),
-                          ))
-                      : const SizedBox.shrink(),
-                  state.selectedEdge != null
-                      ? Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: MaterialButton(
-                            onPressed: () {
-                              context
-                                  .read<GdsPageBloc>()
-                                  .add(DeleteElementButtonPressGdsEvent());
-                            },
-                            child: const Text('Удалить'),
-                            color: Colors.red,
-                          ))
-                      : const SizedBox.shrink(),
-
+                  Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          context.read<GdsPageBloc>().add(
+                              AddElementButtonPressGdsEvent(
+                                  double.parse(_flowFieldController.text)));
+                        },
+                        child: Text('Добавить ${state.selectedType}'),
+                      ))
                   //const TextField(),
                   //const TextField(),
                 ],
@@ -288,6 +290,180 @@ class PipelinePanelWidget extends StatelessWidget {
           return const CircularProgressIndicator();
         }
       },
+    );
+  }
+}
+
+
+class _PipelineInformationCardWidget extends StatelessWidget {
+  const _PipelineInformationCardWidget({Key? key, required this.edge})
+      : super(key: key);
+  final GraphEdge edge;
+  static TextEditingController sinkFlowValueTextController =
+  TextEditingController();
+  static TextEditingController lenValueTextController = TextEditingController();
+  static TextEditingController sourcePressureValueTextController = TextEditingController();
+  @override
+  Widget build(BuildContext context) {
+    sinkFlowValueTextController.text = edge.targetFlow.toString();
+    lenValueTextController.text = edge.len.toString();
+    sourcePressureValueTextController.text = (edge.pressure/1000000).toString();
+    return Card(
+      elevation: 10,
+      child: SizedBox(
+        width: 200,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(edge.type.name.toUpperCase()),
+            Text("id: ${edge.id}"),
+            Text("PtoP: ${edge.p1.id}-${edge.p2.id}"),
+            Text("Длина участка: ${edge.len} м"),
+            Text("Направление: ${edge.flowDirection?.id}"),
+            Text("Flow: ${(edge.flow*3600).toStringAsFixed(2)} м^3 / ч"),
+            Text("Давление: ${(edge.pressure / 1000000).toStringAsFixed(4)} МПа"),
+            edge.temperature!=null?Text("Тепература: ${(edge.temperature! - 273.15).toStringAsFixed(2)} °C) "):const SizedBox.shrink(),
+            Text("Диаметр: ${edge.diam} м"),
+            (edge.type == GdsElementType.valve)
+                ? MaterialButton(
+              color: edge.openPercentage == 0
+                  ? Colors.redAccent
+                  : Colors.lightGreen,
+              child: Text(
+                  edge.openPercentage == 0 ? "Закрыт" : "Открыт"),
+              onPressed: () {
+                context.read<GdsPageBloc>().add(
+                    GdsThroughputFLowPercentageElementChangeEvent(
+                        edge, edge.openPercentage == 0 ? 1 : 0));
+              },
+            )
+                : const SizedBox.shrink(),
+            Container(
+              width: 150,
+              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+              child: TextField(
+                keyboardType: TextInputType.number,
+                controller: lenValueTextController,
+                onChanged: (str) {
+                  context.read<GdsPageBloc>().add(
+                      GdsLenElementChangeEvent(
+                          edge,
+                          double.parse(
+                              lenValueTextController.value.text)));
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Длина м',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            (edge.type == GdsElementType.percentageValve)
+                ? Text(
+                "Открыт на ${(edge.openPercentage * 100).toInt()}%")
+                : const SizedBox.shrink(),
+            (edge.type == GdsElementType.percentageValve)
+                ? Slider(
+              value: edge.openPercentage * 100,
+              max: 100,
+              divisions: 10,
+              label: edge.openPercentage.toString(),
+              onChanged: (double value) {
+                context.read<GdsPageBloc>().add(
+                    GdsThroughputFLowPercentageElementChangeEvent(
+                        edge, value / 100));
+              },
+            )
+                : const SizedBox.shrink(),
+            (edge.type == GdsElementType.sink)
+                ? Container(
+              width: 150,
+              padding:
+              const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+              child: TextField(
+                keyboardType: TextInputType.number,
+                controller: sinkFlowValueTextController,
+                onChanged: (str) {
+                  context.read<GdsPageBloc>().add(
+                      GdsSinkTargetFLowElementChangeEvent(
+                          edge,
+                          double.parse(sinkFlowValueTextController
+                              .value.text)));
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Расход м^3/c',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            )
+                : const SizedBox.shrink(),
+            (edge.type == GdsElementType.source)
+                ? Container(
+              width: 150,
+              padding:
+              const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+              child: TextField(
+                keyboardType: TextInputType.number,
+                controller: sourcePressureValueTextController,
+                onChanged: (str) {
+                  context.read<GdsPageBloc>().add(
+                      GdsSourcePressureElementChangeEvent(
+                          edge,
+                          double.parse(sourcePressureValueTextController
+                              .value.text)));
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Давление МПа',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            )
+                : const SizedBox.shrink(),
+            (edge.type == GdsElementType.reducer)
+                ? Text(
+                "Давление на которое\n настроен редуктор: ${edge.targetPressure / 1000000} МПа")
+                : const SizedBox.shrink(),
+            (edge.type == GdsElementType.heater)
+                ? Slider(
+              value: edge.heaterPower!,
+              max: 1000,
+              min: 100,
+              divisions: 10,
+              label: "Мощность подогревателя: ${edge.heaterPower} МВт",
+              onChanged: (double value) {
+                context.read<GdsPageBloc>().add(
+                    GdsHeaterPowerElementChangeEvent(
+                        edge, value));
+              },
+            )
+                : const SizedBox.shrink(),
+            (edge.type == GdsElementType.reducer)
+                ? Slider(
+              value: edge.targetPressure / 1000000,
+              max: 2,
+              min: 1,
+              divisions: 10,
+              label: "${edge.targetPressure / 1000000}МПа",
+              onChanged: (double value) {
+                context.read<GdsPageBloc>().add(
+                    GdsTargetPressureReducerElementChangeEvent(
+                        edge, value * 1000000));
+              },
+            )
+                : const SizedBox.shrink(),
+            Padding(
+                padding: const EdgeInsets.all(10),
+                child: MaterialButton(
+                  onPressed: () {
+                    context
+                        .read<GdsPageBloc>()
+                        .add(DeleteElementButtonPressGdsEvent());
+                  },
+                  color: Colors.red,
+                  child: const Text('Удалить'),
+                ))
+          ],
+        ),
+      ),
     );
   }
 }

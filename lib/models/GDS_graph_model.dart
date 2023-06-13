@@ -1,9 +1,11 @@
+import 'dart:isolate';
 import 'dart:math';
 import 'dart:ui';
 
 import 'package:gas_distribution_station_model/data/entities/edge.dart';
 import 'package:gas_distribution_station_model/data/entities/point.dart';
 import 'package:gas_distribution_station_model/models/gds_element_type.dart';
+import 'package:tuple/tuple.dart';
 
 extension MyFancyList<T> on List<T> {
   bool isInside(T elem) => where((element) => elem == element).isNotEmpty;
@@ -12,7 +14,7 @@ extension MyFancyList<T> on List<T> {
 }
 
 class GraphPipeline {
-  double GAS_DENSITY = 0.657;
+  static const double gasDensity = 0.657;
   Map<int, GraphPoint> points = {};
   Map<String, GraphEdge> edges = {};
 
@@ -107,7 +109,7 @@ class GraphPipeline {
   /// возвращает объедененную вершину
   GraphPoint mergePoints(GraphPoint basePoint, GraphPoint targetPoint) {
     removeEdgeBy2Points(basePoint, targetPoint);
-    List<GraphPoint> basePoints = []..addAll(basePoint.points);
+    List<GraphPoint> basePoints = [...basePoint.points];
     for (var p in basePoints) {
       if (targetPoint.points.isNotInside(p)) {
         GraphEdge oldEdge = getEdgeBy2Points(basePoint, p)!;
@@ -205,7 +207,6 @@ class GraphPipeline {
     bool canDistributeDebtFlow = availableDestinations.isNotEmpty;
     while (canDistributeDebtFlow) {
       double oldFlowDebt = flowDebt;
-      double n = availableDestinations.length.toDouble();
       double sumCrossSection = 0;
       for (var destination in availableDestinations) {
         var edge = getEdgeBy2Points(point, destination);
@@ -221,27 +222,12 @@ class GraphPipeline {
         GraphEdge edge = getEdgeBy2Points(point, destination)!;
         forwardedFlow =
             oldFlowDebt * (edge.minCrossSectionOfThisPart / sumCrossSection);
+        List<GraphPoint> newWay = [...way, point]
 
-        ///
-        // if (edge.flowDirection == point) {
-        //   if (edge.crossSection + edge.flow < forwardedFlow) {
-        //     forwardedFlow = edge.throughputFlow + edge.flow;
-        //   }
-        // } else {
-        //   if (edge.throughputFlow - edge.flow < forwardedFlow) {
-        //     forwardedFlow = edge.throughputFlow - edge.flow;
-        //   }
-        // }
-
-        List<GraphPoint> newWay = []
-          ..addAll(way)
-          ..add(point);
+          ;
         double remainder =
             _distributeFlowRecurrent(destination, forwardedFlow, newWay);
         flowDebt -= (forwardedFlow - remainder);
-        if (forwardedFlow - remainder != 0) {
-          point.flowWays.add(FlowWay(newWay, forwardedFlow - remainder));
-        }
       }
       availableDestinations = _getAvailableDestinations(point, way, lockEdges);
       if (availableDestinations.isEmpty ||
@@ -281,23 +267,23 @@ class GraphPipeline {
     switch (lastEdge?.type) {
       case GdsElementType.reducer:
         {
-          if (pressureFromLastEdge >= lastEdge!.targetPressure)
-            point.pressure = lastEdge!.targetPressure;
+          if (pressureFromLastEdge >= lastEdge!.targetPressure) {
+            point.pressure = lastEdge.targetPressure;
+          }
         }
         break;
       default:
         {
           late double coeffHydraulicFriction;
-          double dynamicViscosityOfMethane = 1000;
+          //double dynamicViscosityOfMethane = 1000;
           double kinematicviscosityofmethane = 14.3 * 10e-6;
           double reinoldsCoef = 0.0354 *
               lastEdge!.flow *
               3600 /
-              (lastEdge!.diam * 100 * kinematicviscosityofmethane);
+              (lastEdge.diam * 100 * kinematicviscosityofmethane);
           if (reinoldsCoef < 100000) {
             coeffHydraulicFriction =
                 1 / pow((1.821 * 9.81 * reinoldsCoef - 1.64), 2);
-            //coeffHydraulicFriction = 0.3164 / pow(reinoldsCoef, 0.25);
           } else {
             coeffHydraulicFriction =
                 1 / pow((1.821 * 9.81 * reinoldsCoef - 1.64), 2);
@@ -306,10 +292,10 @@ class GraphPipeline {
               0.11 * pow((0.01 / lastEdge.diam * 100 + 68 / reinoldsCoef), 2);
           double newPressureValue = sqrt(-0.00012687 *
                       coeffHydraulicFriction *
-                      (lastEdge!.flow * 3600) *
-                      GAS_DENSITY *
+                      (lastEdge.flow * 3600) *
+                      gasDensity *
                       lastEdge.len /
-                      pow(lastEdge!.diam * 100, 5) +
+                      pow(lastEdge.diam * 100, 5) +
                   pow(pressureFromLastEdge / 1000000, 2)) *
               1000000;
           if (newPressureValue > point.pressure) {
@@ -329,14 +315,15 @@ class GraphPipeline {
       if (edge.flowDirection != destination) {
         continue;
       }
-      List<GraphPoint> newWay = []
-        ..addAll(way)
-        ..add(point);
+      List<GraphPoint> newWay = [...way, point]
+
+        ;
       _calculatePressureRecurrent(destination, point.pressure, newWay);
     }
   }
 
   void _calculateTemperatureRecurrent(GraphPoint point, List<GraphPoint> way) {
+    ///
     double c = 2.226; //удельная теплоемкость метана
     GraphEdge? lastEdge =
         way.isNotEmpty ? getEdgeBy2Points(point, way.last)! : null;
@@ -348,29 +335,36 @@ class GraphPipeline {
     List<GraphEdge> lockEdges = [];
     List<GraphPoint> availableDestinations =
         _getAvailableDestinations(point, way, lockEdges);
+    double summ1 = 0;
+    double summ2 = 0;
     for (GraphPoint destination in availableDestinations) {
       GraphEdge edge = getEdgeBy2Points(point, destination)!;
       if (edge.flowDirection == destination) {
         continue;
       }
-      List<GraphPoint> newWay = []
-        ..addAll(way)
-        ..add(point);
+      List<GraphPoint> newWay = [...way, point]
+
+        ;
       _calculateTemperatureRecurrent(destination, newWay);
-      lastEdge!.temperature = (edge.temperature * c * edge.flow +
-              lastEdge.temperature * c * edge.flow) /
-          ((lastEdge.flow + edge.flow) * c);
+      if (lastEdge!.temperature == null) {
+        lastEdge.temperature = 0;
+      }
+      summ1 += edge.temperature! * edge.flow;
+      summ2 += edge.flow;
     }
+    if (summ2 != 0) lastEdge!.temperature = summ1 / summ2;
+
     switch (lastEdge?.type) {
       case GdsElementType.heater:
-        double dT = lastEdge!.heaterPower / (c * lastEdge.flow);
-        lastEdge.temperature += dT;
+        double dT = lastEdge!.heaterPower! / (c * lastEdge.flow);
+        lastEdge.temperature = lastEdge.temperature! + dT;
         break;
       case GdsElementType.reducer:
-        lastEdge!.temperature =
-            (lastEdge!.flowStart!.pressure - lastEdge.flowDirection!.pressure) *
-                278.15 /
-                1000000;
+        double dT = -(lastEdge!.flowStart!.pressure -
+                lastEdge.flowDirection!.pressure) /
+            1000000 *
+            5;
+        lastEdge.temperature = lastEdge.temperature! + dT;
       default:
     }
   }
@@ -378,37 +372,50 @@ class GraphPipeline {
   ///
   ///
   ///функция распределения потока
-  void calculatePipeline() {
-    GraphEdge? sourceEdge;
-    for (var point in points.values) {
-      point.flow = 0;
-      point.flowWays = [];
-      point.pressure = 0;
-    }
-    List<GraphEdge> sinks = [];
-    for (var edge in edges.values) {
-      if (edge.type == GdsElementType.source) {
-        sourceEdge = edge;
-        sourceEdge.p1.pressure = sourceEdge.pressure;
-        sourceEdge.p2.pressure = sourceEdge.pressure;
-      } else if (edge.type == GdsElementType.sink) {
-        sinks.add(edge);
-        sourceEdge!.sourceFlow += edge.targetFlow;
-      } else {
-        edge.pressure = 0;
+  Future<void> calculatePipeline() async {
+    Tuple2<Map<int,GraphPoint>,Map<String,GraphEdge>> data= await Isolate.run(() async {
+      GraphEdge? sourceEdge;
+      for (var point in points.values) {
+        point.flow = 0;
+        point.pressure = 0;
       }
-      edge.flow = 0;
-      edge.minCrossSectionOfThisPart = edge.crossSection;
-    }
-    _distributeFlowRecurrent(sourceEdge!.p2, sourceEdge.sourceFlow, []);
-    _calculatePressureRecurrent(
-        sourceEdge!.p1, sourceEdge.pressure, [sourceEdge.p2]);
-    for (var sinkEdge in sinks) {
-      if (sinkEdge.flow != 0) {
-        _calculateTemperatureRecurrent(
-            sinkEdge.flowStart!, [sinkEdge.flowDirection!]);
+      List<GraphEdge> sinks = [];
+      for (var edge in edges.values) {
+        edge.heaterPower = 400; //todo() remove this
+        if (edge.type == GdsElementType.source) {
+          sourceEdge = edge;
+        } else if (edge.type == GdsElementType.sink) {
+          sinks.add(edge);
+        } else {
+          edge.temperature = null;
+          edge.pressure = 0;
+        }
+        edge.flowDirection = null;
+        edge.flow = 0;
+        edge.minCrossSectionOfThisPart = edge.crossSection;
       }
-    }
+      sourceEdge!.temperature = 293.15;
+      sourceEdge.p1.pressure = sourceEdge.pressure;
+      sourceEdge.p2.pressure = sourceEdge.pressure;
+      sourceEdge.sourceFlow = 0;
+      for (var edge in sinks) {
+        edge.temperature = null;
+        sourceEdge.sourceFlow += edge.targetFlow;
+      }
+
+      _distributeFlowRecurrent(sourceEdge.p2, sourceEdge.sourceFlow, []);
+      _calculatePressureRecurrent(
+          sourceEdge.p1, sourceEdge.pressure, [sourceEdge.p2]);
+      for (var sinkEdge in sinks) {
+        if (sinkEdge.flow != 0) {
+          _calculateTemperatureRecurrent(
+              sinkEdge.flowStart!, [sinkEdge.flowDirection!]);
+        }
+      }
+      return Tuple2(points,edges);
+    });
+    points = data.item1;
+    edges = data.item2;
   }
 
   static int _lastId = 0;
@@ -429,7 +436,6 @@ class GraphPoint extends Point {
   /// давление в паскалях
   double pressure = 0;
   double flow = 0;
-  List<FlowWay> flowWays = [];
 
   Offset get position {
     return Offset(positionX, positionY);
@@ -443,20 +449,13 @@ class GraphPoint extends Point {
   GraphPoint(
       {required super.id,
       required super.positionX,
-      required super.positionY}) {}
+      required super.positionY});
 
   GraphPoint.fromPoint(Point point)
       : super(
             id: point.id,
             positionY: point.positionY,
-            positionX: point.positionX) {}
-}
-
-class FlowWay {
-  FlowWay(this.way, this.flow);
-
-  List<GraphPoint> way;
-  double flow;
+            positionX: point.positionX);
 }
 
 class GraphEdge extends Edge {
@@ -470,15 +469,6 @@ class GraphEdge extends Edge {
             p1id: edge.p1id,
             p2id: edge.p2id,
             typeId: edge.typeId) {
-    switch (typeId) {
-      case GdsElementType.source:
-        pressure = 10000000;
-        break;
-      case GdsElementType.sink:
-        targetFlow = 10;
-      default:
-    }
-
     p1 = graphPipeline!.getPointById(p1id)!;
     p2 = graphPipeline!.getPointById(p2id)!;
     type = GdsElementType.values[typeId];
@@ -494,14 +484,6 @@ class GraphEdge extends Edge {
       required super.diam,
       required super.len,
       required this.graphPipeline}) {
-    switch (typeId) {
-      case GdsElementType.source:
-        pressure = 10000000;
-        break;
-      case GdsElementType.heater:
-        heaterPower = 10000;
-      default:
-    }
     p1 = graphPipeline!.getPointById(p1id)!;
     p2 = graphPipeline!.getPointById(p2id)!;
     type = GdsElementType.values[typeId];
@@ -510,7 +492,6 @@ class GraphEdge extends Edge {
   }
 
   GraphPipeline? graphPipeline;
-  int id = GraphPipeline.generateId();
   late GraphPoint p1;
   late GraphPoint p2;
 
@@ -525,7 +506,7 @@ class GraphEdge extends Edge {
   /// поперечное сечение участка в м^2
   double _crossSection = 0;
 
-  double temperature = 293.15;
+  double? temperature;
 
   double get crossSection => _crossSection * openPercentage;
 
@@ -559,7 +540,7 @@ class GraphEdge extends Edge {
   /// источник потока
   double sourceFlow = 0;
 
-  double heaterPower = 0;
+  double? heaterPower;
 
   double flow = 0;
 

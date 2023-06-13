@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:gas_distribution_station_model/logic/gds_bloc.dart';
 import 'package:gas_distribution_station_model/models/GDS_graph_model.dart';
-import 'package:gas_distribution_station_model/models/gds_element_type.dart';
 import 'package:gas_distribution_station_model/presentation/styles.dart';
 
 double _getAngle(Offset p1, Offset p2) {
@@ -11,18 +10,11 @@ double _getAngle(Offset p1, Offset p2) {
   double y1 = p1.dy - min(p1.dy, p2.dy);
   double x2 = p2.dx - min(p1.dx, p2.dx);
   double y2 = p2.dy - min(p1.dy, p2.dy);
-  double k = (y2 - y1) / (x2 - x1);
   double result = pi - atan2(x2 - x1, y2 - y1);
   if ((x2 - x1).abs() > (y2 - y1).abs()) {
     //result+=pi/2;
   }
   return result;
-}
-
-double _getLen(Offset p1, Offset p2) {
-  double width = (p2.dx - p1.dx).abs();
-  double height = (p2.dy - p1.dy).abs();
-  return sqrt(width * width + height * height);
 }
 
 class _MyLinePainter extends CustomPainter {
@@ -68,7 +60,6 @@ class PipelineWidget extends StatelessWidget {
     double width = (p2.dx - p1.dx).abs() + additionalSize;
     double height = (p2.dy - p1.dy).abs() + additionalSize;
     double angle = _getAngle(p1, p2);
-    double len = _getLen(p1, p2);
     MaterialColor pipeColor = edge.openPercentage == 0
         ? Colors.red
         : edge.flow != 0
@@ -78,14 +69,6 @@ class PipelineWidget extends StatelessWidget {
       top: min(p1.dy, p2.dy) - (dragPointSize),
       left: min(p1.dx, p2.dx) - (dragPointSize),
       child: Stack(children: [
-        Positioned(
-          right: 0,
-          top: additionalSize / 2,
-          child: Text(
-            "flow:${edge.flow.toStringAsFixed(2)}",
-            style: TextStyle(fontSize: isSelect ? 25 : 10),
-          ),
-        ),
         SizedBox(
           width: width + dragPointSize * 2,
           height: height + dragPointSize * 2,
@@ -366,7 +349,6 @@ class PipelineReducerWidget extends StatelessWidget {
         ));
   }
 }
-
 class PipelineMeterWidget extends StatelessWidget {
   final GraphEdge edge;
   final bool isSelect;
@@ -386,152 +368,5 @@ class PipelineMeterWidget extends StatelessWidget {
                 width: 30, child: Image.asset("assets/meter_image.png")),
           ),
         ));
-  }
-}
-
-class PipelineInformationCardWidget extends StatelessWidget {
-  const PipelineInformationCardWidget({Key? key, required this.edge})
-      : super(key: key);
-  final GraphEdge edge;
-  static TextEditingController sourceFlowValueTextController =
-      TextEditingController();
-  static TextEditingController lenValueTextController = TextEditingController();
-  static TextEditingController sourcePressureValueTextController = TextEditingController();
-  @override
-  Widget build(BuildContext context) {
-    sourceFlowValueTextController.text = edge.sourceFlow.toString();
-    lenValueTextController.text = edge.len.toString();
-    sourcePressureValueTextController.text = (edge.pressure/1000000).toString();
-    return Card(
-      elevation: 10,
-      child: SizedBox(
-        width: 200,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(edge.type.name.toUpperCase()),
-            Text("id: ${edge.id}"),
-            Text("PtoP: ${edge.p1.id}-${edge.p2.id}"),
-            Text("длина участка: ${edge.len}"),
-            Text("Flow: ${edge.flow} м^2 / c"),
-            Text("Давление: ${edge.pressure / 1000000} МПа"),
-            Text("температура: ${edge.temperature - 273.15} Цельсий"),
-            Text("Диаметр: ${edge.diam} м"),
-            Container(
-              width: 100,
-              padding: EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-              child: TextField(
-                keyboardType: TextInputType.number,
-                controller: lenValueTextController,
-                onChanged: (str) {
-                  context.read<GdsPageBloc>().add(
-                      GdsLenElementChangeEvent(
-                          edge,
-                          double.parse(
-                              lenValueTextController.value.text)));
-                },
-                decoration: const InputDecoration(
-                  labelText: 'Длина',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ),
-            (edge.type == GdsElementType.valve)
-                ? MaterialButton(
-                    color: edge.openPercentage == 0
-                        ? Colors.redAccent
-                        : Colors.lightGreen,
-                    child: Text(
-                        edge.openPercentage == 0 ? "Закрыт" : "Открыт"),
-                    onPressed: () {
-                      context.read<GdsPageBloc>().add(
-                          GdsThroughputFLowPercentageElementChangeEvent(
-                              edge, edge.openPercentage == 0 ? 1 : 0));
-                    },
-                  )
-                : const SizedBox.shrink(),
-            (edge.type == GdsElementType.percentageValve)
-                ? Text(
-                    "Открыт на ${(edge.openPercentage * 100).toInt()}%")
-                : const SizedBox.shrink(),
-            (edge.type == GdsElementType.percentageValve)
-                ? Slider(
-                    value: edge.openPercentage * 100,
-                    max: 100,
-                    divisions: 10,
-                    label: edge.openPercentage.toString(),
-                    onChanged: (double value) {
-                      context.read<GdsPageBloc>().add(
-                          GdsThroughputFLowPercentageElementChangeEvent(
-                              edge, value / 100));
-                    },
-                  )
-                : const SizedBox.shrink(),
-            (edge.type == GdsElementType.sink)
-                ? Container(
-                    width: 100,
-                    padding:
-                        EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-                    child: TextField(
-                      keyboardType: TextInputType.number,
-                      controller: sourceFlowValueTextController,
-                      onChanged: (str) {
-                        context.read<GdsPageBloc>().add(
-                            GdsSinkTargetFLowElementChangeEvent(
-                                edge,
-                                double.parse(sourceFlowValueTextController
-                                    .value.text)));
-                      },
-                      decoration: const InputDecoration(
-                        labelText: 'Расход м^3/c',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  )
-                : const SizedBox.shrink(),
-            (edge.type == GdsElementType.source)
-                ? Container(
-              width: 100,
-              padding:
-              EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-              child: TextField(
-                keyboardType: TextInputType.number,
-                controller: sourcePressureValueTextController,
-                onChanged: (str) {
-                  context.read<GdsPageBloc>().add(
-                      GdsSourcePressureElementChangeEvent(
-                          edge,
-                          double.parse(sourcePressureValueTextController
-                              .value.text)));
-                },
-                decoration: const InputDecoration(
-                  labelText: 'Давление МПа',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            )
-                : const SizedBox.shrink(),
-            (edge.type == GdsElementType.reducer)
-                ? Text(
-                    "Давление на которое\n настроен редуктор: ${edge.targetPressure / 1000000} МПа")
-                : const SizedBox.shrink(),
-            (edge.type == GdsElementType.reducer)
-                ? Slider(
-                    value: edge.targetPressure / 1000000,
-                    max: 2,
-                    min: 1,
-                    divisions: 10,
-                    label: "${edge.targetPressure / 1000000}МПа",
-                    onChanged: (double value) {
-                      context.read<GdsPageBloc>().add(
-                          GdsTargetPressureReducerElementChangeEvent(
-                              edge, value * 1000000));
-                    },
-                  )
-                : const SizedBox.shrink(),
-          ],
-        ),
-      ),
-    );
   }
 }

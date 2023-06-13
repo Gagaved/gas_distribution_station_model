@@ -38,7 +38,6 @@ class CalculateFlowButtonPressGdsEvent extends GdsEvent {}
 
 class GdsElementChangeSizeEvent extends GdsEvent {
   final int id;
-
   final double newWidth;
   final double newHeight;
 
@@ -81,6 +80,12 @@ class GdsSinkTargetFLowElementChangeEvent extends GdsEvent {
   GdsSinkTargetFLowElementChangeEvent(this.element, this.value);
 }
 
+class GdsHeaterPowerElementChangeEvent extends GdsEvent {
+  final GraphEdge element;
+  final double value;
+
+  GdsHeaterPowerElementChangeEvent(this.element, this.value);
+}
 
 class GdsSourcePressureElementChangeEvent extends GdsEvent {
   final GraphEdge element;
@@ -98,5 +103,7 @@ class GdsCreateElementEvent extends GdsEvent {
 }
 
 class ExportGdsToFileEvent extends GdsEvent {}
+
 class LoadFromFileEvent extends GdsEvent {}
-class LoadFromDBEvent extends GdsEvent{}
+
+class LoadFromDBEvent extends GdsEvent {}
