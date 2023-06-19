@@ -1,11 +1,13 @@
-part of 'editor_bloc.dart';
+part of 'viewer_page_bloc.dart';
 
 enum CalculateStatus { process, complete, error }
 
-abstract class GdsState {}
+abstract class ViewerPageState {}
 
-class EditorMainState extends GdsState {
-  EditorMainState(
+class ViewerPageInitial extends ViewerPageState {}
+
+class ViewerMainState extends ViewerPageState {
+  ViewerMainState(
       this.graph, this.selectedEdge, this.selectedType, this.calculateStatus);
 
   CalculateStatus calculateStatus;
@@ -14,6 +16,4 @@ class EditorMainState extends GdsState {
   PipelineElementType selectedType;
 }
 
-class EditorInitialState extends GdsState {}
-
-class EditorLoadingState extends GdsState {}
+class ViewerPageLoadingState extends ViewerPageState {}

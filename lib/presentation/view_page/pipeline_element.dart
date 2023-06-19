@@ -1,5 +1,5 @@
 
-part of 'editor_page.dart';
+part of 'viewer_page.dart';
 
 double _getAngle(Offset p1, Offset p2) {
   double x1 = p1.dx - min(p1.dx, p2.dx);
@@ -94,15 +94,8 @@ class PipelineWidget extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () {
                     context
-                        .read<EditorPageBloc>()
-                        .add(GdsSelectElementEditorEvent(edge));
-                  },
-                  onPanUpdate: (d) {
-                    if (isSelect) {
-                      context
-                          .read<EditorPageBloc>()
-                          .add(GdsPointMoveEditorEvent(edge.p1.id, d.delta));
-                    }
+                        .read<ViewerPageBloc>()
+                        .add(SelectElementViewerEvent(edge));
                   },
                   child: Container(
                     width: dragPointSize,
@@ -121,15 +114,8 @@ class PipelineWidget extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () {
                     context
-                        .read<EditorPageBloc>()
-                        .add(GdsSelectElementEditorEvent(edge));
-                  },
-                  onPanUpdate: (d) {
-                    if (isSelect) {
-                      context
-                          .read<EditorPageBloc>()
-                          .add(GdsPointMoveEditorEvent(edge.p2.id, d.delta));
-                    }
+                        .read<ViewerPageBloc>()
+                        .add(SelectElementViewerEvent(edge));
                   },
                   child: Container(
                     width: dragPointSize,
@@ -148,15 +134,8 @@ class PipelineWidget extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () {
                     context
-                        .read<EditorPageBloc>()
-                        .add(GdsSelectElementEditorEvent(edge));
-                  },
-                  onPanUpdate: (d) {
-                    if (isSelect) {
-                      context
-                          .read<EditorPageBloc>()
-                          .add(GdsElementMoveEditorEvent(id, d.delta, d.delta));
-                    }
+                        .read<ViewerPageBloc>()
+                        .add(SelectElementViewerEvent(edge));
                   },
                   child: RotatedBox(
                     quarterTurns: width > height ? 1 : 0,
@@ -188,15 +167,8 @@ class PipelineWidget extends StatelessWidget {
                       child: GestureDetector(
                         onTap: () {
                           context
-                              .read<EditorPageBloc>()
-                              .add(GdsSelectElementEditorEvent(edge));
-                        },
-                        onPanUpdate: (d) {
-                          if (isSelect) {
-                            context
-                                .read<EditorPageBloc>()
-                                .add(GdsElementMoveEditorEvent(id, d.delta, d.delta));
-                          }
+                              .read<ViewerPageBloc>()
+                              .add(SelectElementViewerEvent(edge));
                         },
                         child: RotatedBox(
                           quarterTurns: width > height ? 1 : 0,

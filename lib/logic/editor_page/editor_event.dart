@@ -35,7 +35,7 @@ class GdsPointMoveEditorEvent extends EditorEvent {
 }
 
 class CalculateFlowButtonPressEvent extends EditorEvent {}
-
+class ClearButtonPressEditorEvent extends EditorEvent{}
 class GdsElementChangeSizeEditorEvent extends EditorEvent {
   final int id;
   final double newWidth;

@@ -10,7 +10,6 @@ import 'package:meta/meta.dart';
 import 'package:gas_distribution_station_model/globals.dart' as globals;
 
 part 'editor_event.dart';
-
 part 'editor_state.dart';
 
 class EditorPageBloc extends Bloc<EditorEvent, GdsState> {
@@ -22,7 +21,8 @@ class EditorPageBloc extends Bloc<EditorEvent, GdsState> {
 
   EditorPageBloc() : super(EditorInitialState()) {
     on<AddElementButtonPressEditorEvent>((event, emit) {
-      _addNewEdge(event.diam);
+      var newEdge = _addNewEdge(event.diam);
+      _selectedElement = newEdge;
       emit(EditorMainState(
           graph!, _selectedElement, _selectedType!, calculateStatus));
     });
@@ -109,7 +109,12 @@ class EditorPageBloc extends Bloc<EditorEvent, GdsState> {
     on<ExportGdsToFileEvent>((event, emit) {
       exportGdsToFile();
     });
-
+    on<ClearButtonPressEditorEvent>((event,emit)async {
+      emit(EditorLoadingState());
+      await clearGds();
+      emit(EditorMainState(
+          graph!, _selectedElement, _selectedType!, calculateStatus));
+    });
     on<LoadFromFileEvent>((event, emit) async {
       emit(EditorLoadingState());
       await loadGdsFromFile();
@@ -140,10 +145,10 @@ class EditorPageBloc extends Bloc<EditorEvent, GdsState> {
     return null;
   }
 
-  void _addNewEdge(double diam) {
+  GraphEdge _addNewEdge(double diam) {
     var p1 = graph!.addPoint(position: const Offset(300, 300));
     var p2 = graph!.addPoint(position: const Offset(300, 400));
-    graph!.link(p1, p2, diam, _selectedType!, 0);
+    return graph!.link(p1, p2, diam, _selectedType!, 0);
   }
 
   Future<void> exportGdsToFile() async {
@@ -180,7 +185,7 @@ class EditorPageBloc extends Bloc<EditorEvent, GdsState> {
     var edgeDao = globals.database.edgeDAO;
     var points = await pointDao.getAllPoints();
     var edges = await edgeDao.getAllEdges();
-    graph = GraphPipeline(points, edges);
+    graph = GraphPipeline.fromPointsAndEdges(points, edges);
   }
 
   Future<void> loadGdsFromFile() async {
@@ -193,5 +198,12 @@ class EditorPageBloc extends Bloc<EditorEvent, GdsState> {
     } else {
       // User canceled the picker
     }
+  }
+
+  Future<void> clearGds() async {
+    graph = GraphPipeline.fromPointsAndEdges([], []);
+    await globals.database.edgeDAO.deleteAllEdges();
+    await globals.database.pointDAO.deleteAllPoints();
+    return;
   }
 }

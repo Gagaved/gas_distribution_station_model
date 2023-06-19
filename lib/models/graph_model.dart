@@ -14,11 +14,20 @@ extension MyFancyList<T> on List<T> {
 }
 
 class GraphPipeline {
+
+  static GraphPipeline _singleton = GraphPipeline._internal();
+
+  factory GraphPipeline() {
+    return _singleton;
+  }
+
+  GraphPipeline._internal();
+
   static const double gasDensity = 0.657;
   Map<int, GraphPoint> points = {};
   Map<String, GraphEdge> edges = {};
 
-  GraphPipeline(List<Point> pointsDB, List<Edge> edgesDB) {
+  GraphPipeline.fromPointsAndEdges(List<Point> pointsDB, List<Edge> edgesDB) {
     for (var pointDB in pointsDB) {
       points[pointDB.id] = GraphPoint.fromPoint(pointDB);
       _lastId = max(pointDB.id, _lastId);
@@ -30,6 +39,7 @@ class GraphPipeline {
       edges[key]!.p1.points.add(edges[key]!.p2);
       edges[key]!.p2.points.add(edges[key]!.p1);
     }
+    _singleton = this;
   }
 
   GraphEdge? getEdgeBy2Points(GraphPoint p1, GraphPoint p2) {
@@ -77,7 +87,7 @@ class GraphPipeline {
   ///
   ///
   /// связывает две точки
-  void link(GraphPoint p1, GraphPoint p2, double diam, PipelineElementType type,
+  GraphEdge link(GraphPoint p1, GraphPoint p2, double diam, PipelineElementType type,
       double len,
       [double sourceFlow = 0.0]) {
     var newEdge = GraphEdge(
@@ -102,6 +112,7 @@ class GraphPipeline {
       p1.pressure = newEdge.pressure;
       p2.pressure = newEdge.pressure;
     }
+    return newEdge;
   }
 
   ///
@@ -381,7 +392,6 @@ class GraphPipeline {
       }
       List<GraphEdge> sinks = [];
       for (var edge in edges.values) {
-        edge.heaterPower = 400; //todo() remove this
         if (edge.type == PipelineElementType.source) {
           sourceEdge = edge;
         } else if (edge.type == PipelineElementType.sink) {
@@ -539,8 +549,9 @@ class GraphEdge extends Edge {
   ///
   /// источник потока
   double sourceFlow = 0;
-
-  double? heaterPower;
+  ///
+  /// мощность нагревателя
+  double? heaterPower = 000;
 
   double flow = 0;
 
