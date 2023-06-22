@@ -33,7 +33,7 @@ msix_config:
   display_name: GdsPipeline
   publisher_display_name: Morozov
   languages: en-us
- flutter:
+flutter:
   assets:
     - assets/appainter_theme.json
     - assets/valve_image.png
