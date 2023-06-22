@@ -2,11 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gas_distribution_station_model/data/database/database.dart';
 import 'package:gas_distribution_station_model/presentation/main_screen/main_screen.dart';
 import 'package:json_theme/json_theme.dart';
-import 'globals.dart' as globals;
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +13,7 @@ void main() async {
   final theme = ThemeDecoder.decodeThemeData(themeJson)!;
 
   WidgetsFlutterBinding.ensureInitialized();
-  globals.database = await $FloorAppDatabase.databaseBuilder('edmt1 database.db').build();
+  //globals.database = await $FloorAppDatabase.databaseBuilder('edmt1 database.db').build();
 
 
   runApp(App(theme: theme));

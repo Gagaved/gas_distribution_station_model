@@ -1,9 +1,7 @@
 library globals;
-
-import 'package:gas_distribution_station_model/data/database/database.dart';
 import 'package:flutter/material.dart';
 
-late AppDatabase database;
+//late AppDatabase database;
 class AdditionalColors {
   static Color planBorderElement = const Color.fromARGB(255, 194, 72, 255);
   static Color planBorderElementTranslucent = const Color.fromARGB(

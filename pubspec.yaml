@@ -23,7 +23,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  floor_generator: any
   build_runner: any
   flutter_lints: ^2.0.0
   msix: ^3.14.2
@@ -33,7 +32,7 @@ msix_config:
   display_name: GdsPipeline
   publisher_display_name: Morozov
   languages: en-us
- flutter:
+flutter:
   assets:
     - assets/appainter_theme.json
     - assets/valve_image.png

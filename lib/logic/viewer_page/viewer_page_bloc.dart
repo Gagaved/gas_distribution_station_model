@@ -1,20 +1,18 @@
-import 'dart:async';
 import 'dart:ui';
 
 import 'package:bloc/bloc.dart';
 import 'package:gas_distribution_station_model/models/graph_model.dart';
 import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
 import 'package:meta/meta.dart';
-import 'package:gas_distribution_station_model/globals.dart' as globals;
 
 part 'viewer_page_event.dart';
 
 part 'viewer_page_state.dart';
 
 class ViewerPageBloc extends Bloc<ViewerPageEvent, ViewerPageState> {
-  GraphPipeline? graph;
+  GraphPipeline graph = GraphPipeline();
   GraphEdge? _selectedElement;
-  PipelineElementType? _selectedType;
+  final PipelineElementType _selectedType = PipelineElementType.segment;
   Map<Offset, List<GraphPoint>> magneticGrid = {};
   CalculateStatus calculateStatus = CalculateStatus.complete;
 
@@ -22,11 +20,11 @@ class ViewerPageBloc extends Bloc<ViewerPageEvent, ViewerPageState> {
     on<CalculateFlowButtonPressViewerEvent>((event, emit) async {
       CalculateStatus.process;
       emit(ViewerMainState(
-          graph!, _selectedElement, _selectedType!, CalculateStatus.process));
-      await graph!.calculatePipeline();
+          graph, _selectedElement, _selectedType, CalculateStatus.process));
+      await graph.calculatePipeline();
       calculateStatus = CalculateStatus.complete;
       emit(ViewerMainState(
-          graph!, _selectedElement, _selectedType!, calculateStatus));
+          graph, _selectedElement, _selectedType, calculateStatus));
     });
     on<SelectElementViewerEvent>((event, emit) {
       if (_selectedElement == event.element) {
@@ -35,22 +33,22 @@ class ViewerPageBloc extends Bloc<ViewerPageEvent, ViewerPageState> {
         _selectedElement = event.element;
       }
       emit(ViewerMainState(
-          graph!, _selectedElement, _selectedType!, calculateStatus));
+          graph, _selectedElement, _selectedType, calculateStatus));
     });
     on<DeselectElementViewerEvent>((event, emit) {
       _selectedElement = null;
       emit(ViewerMainState(
-          graph!, _selectedElement, _selectedType!, calculateStatus));
+          graph, _selectedElement, _selectedType, calculateStatus));
     });
     on<ThroughputFLowPercentageElementChangeViewerEvent>((event, emit) {
       event.element.changeThroughputFlowPercentage(event.value);
       emit(ViewerMainState(
-          graph!, _selectedElement, _selectedType!, calculateStatus));
+          graph, _selectedElement, _selectedType, calculateStatus));
     });
     on<GdsHeaterPowerElementChangeViewerEvent>((event, emit) {
       event.element.heaterPower = (event.value);
       emit(ViewerMainState(
-          graph!, _selectedElement, _selectedType!, calculateStatus));
+          graph, _selectedElement, _selectedType, calculateStatus));
     });
     on<SinkTargetFLowElementChangeViewerEvent>((event, emit) {
       event.element.targetFlow =
@@ -63,21 +61,9 @@ class ViewerPageBloc extends Bloc<ViewerPageEvent, ViewerPageState> {
     on<TargetPressureReducerElementChangeViewerEvent>((event, emit) {
       event.element.targetPressure = event.value;
       emit(ViewerMainState(
-          graph!, _selectedElement, _selectedType!, calculateStatus));
+          graph, _selectedElement, _selectedType, calculateStatus));
     });
-    _selectedType = PipelineElementType.segment;
-    () async {
-      graph ??= GraphPipeline();
-      emit(ViewerMainState(
-          graph!, _selectedElement, _selectedType!, calculateStatus));
-    }();
-  }
-
-  Future<void> loadGdsFromDb() async {
-    var pointDao = globals.database.pointDAO;
-    var edgeDao = globals.database.edgeDAO;
-    var points = await pointDao.getAllPoints();
-    var edges = await edgeDao.getAllEdges();
-    graph = GraphPipeline.fromPointsAndEdges(points, edges);
+    emit(ViewerMainState(
+        graph, _selectedElement, _selectedType, calculateStatus));
   }
 }
