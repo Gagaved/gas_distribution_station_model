@@ -10,7 +10,7 @@ class PipelineInformationCardWidget extends StatelessWidget {
   static TextEditingController sourcePressureValueTextController = TextEditingController();
   @override
   Widget build(BuildContext context) {
-    sinkFlowValueTextController.text = edge.targetFlow.toString();
+    sinkFlowValueTextController.text = (edge.targetFlow*3600).toString();
     lenValueTextController.text = edge.len.toString();
     sourcePressureValueTextController.text = (edge.pressure/1000000).toString();
     return Card(
@@ -96,10 +96,10 @@ class PipelineInformationCardWidget extends StatelessWidget {
                       GdsSinkTargetFLowElementChangeEvent(
                           edge,
                           double.parse(sinkFlowValueTextController
-                              .value.text)));
+                              .value.text)/3600));
                 },
                 decoration: const InputDecoration(
-                  labelText: 'Расход м^3/c',
+                  labelText: 'Расход м^3/ч',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -139,7 +139,7 @@ class PipelineInformationCardWidget extends StatelessWidget {
               max: 600,
               min: 0,
               divisions: 10,
-              label: "Мощность подогревателя: ${edge.heaterPower} МВт",
+              label: "Мощность подогревателя: ${edge.heaterPower} Вт",
               onChanged: (double value) {
                 context.read<EditorPageBloc>().add(
                     GdsHeaterPowerElementChangeEvent(

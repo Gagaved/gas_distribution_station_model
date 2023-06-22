@@ -10,7 +10,7 @@ class PipelineInformationCardWidget extends StatelessWidget {
   static TextEditingController sourcePressureValueTextController = TextEditingController();
   @override
   Widget build(BuildContext context) {
-    sinkFlowValueTextController.text = edge.targetFlow.toString();
+    sinkFlowValueTextController.text = (edge.targetFlow*3600).toString();
     lenValueTextController.text = edge.len.toString();
     sourcePressureValueTextController.text = (edge.pressure/1000000).toString();
     return Card(
@@ -98,7 +98,7 @@ class PipelineInformationCardWidget extends StatelessWidget {
                         SinkTargetFLowElementChangeViewerEvent(
                             edge,
                             double.parse(sinkFlowValueTextController
-                                .value.text)));
+                                .value.text)/3600));
                   },
                   decoration: const InputDecoration(
                     labelText: 'Расход м^3/c',

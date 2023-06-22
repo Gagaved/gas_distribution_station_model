@@ -180,12 +180,10 @@ class _PipelinePlanWidget extends StatelessWidget {
           child: Stack(children: listOfElements),
         ),
         state.calculateStatus == CalculateStatus.process
-            ? Expanded(
-                child: Container(
-                  color: Colors.black38,
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-              )
+            ? Container(
+              color: Colors.black38,
+              child: const Center(child: CircularProgressIndicator()),
+            )
             : const SizedBox.shrink()
       ]),
     );
