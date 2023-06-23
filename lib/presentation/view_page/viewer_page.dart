@@ -172,6 +172,8 @@ Widget _getWidgetFromEdge(GraphEdge edge, {required bool isSelect}) {
       return PipelineMeterWidget(edge: edge, isSelect: isSelect);
     case PipelineElementType.filter:
       return PipelineFilterWidget(edge: edge, isSelect: isSelect);
+    case PipelineElementType.adorizer:
+      return PipelineAdorizerWidget(edge: edge, isSelect: isSelect);
     default:
       return PipelineSegmentWidget(edge: edge, isSelect: isSelect);
   }

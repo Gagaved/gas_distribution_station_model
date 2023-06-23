@@ -95,6 +95,13 @@ class GdsSourcePressureElementChangeEvent extends EditorEvent {
 }
 
 class GdsDeselectElementEvent extends EditorEvent {}
+class GdsDiamElementChangeEvent extends EditorEvent{
+  final double value;
+  final GraphEdge element;
+
+  GdsDiamElementChangeEvent(this.value, this.element);
+
+}
 
 class GdsCreateElementEvent extends EditorEvent {
   final PipelineElementType type;

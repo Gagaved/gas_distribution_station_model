@@ -41,5 +41,6 @@ flutter:
     - assets/heater_image.png
     - assets/reducer_image.png
     - assets/filter_image.png
+    - assets/adorizer_image.png
     - assets/GRS.png
   uses-material-design: true

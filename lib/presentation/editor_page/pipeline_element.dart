@@ -366,3 +366,24 @@ class PipelineMeterWidget extends StatelessWidget {
         ));
   }
 }
+class PipelineAdorizerWidget extends StatelessWidget {
+  final GraphEdge edge;
+  final bool isSelect;
+
+  const PipelineAdorizerWidget(
+      {required this.edge, super.key, required this.isSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return PipelineWidget(
+        edge: edge,
+        isSelect: isSelect,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 15.0),
+            child: SizedBox(
+                width: 30, child: Image.asset("assets/adorizer_image.png")),
+          ),
+        ));
+  }
+}

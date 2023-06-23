@@ -367,7 +367,7 @@ class GraphPipeline {
 
     switch (lastEdge?.type) {
       case PipelineElementType.heater:
-        double dT = lastEdge!.heaterPower! / (c * lastEdge.flow);
+        double dT = (lastEdge!.heaterPower!*0.82) / (c * lastEdge.flow);
         lastEdge.temperature = lastEdge.temperature! + dT;
         break;
       case PipelineElementType.reducer:
@@ -404,7 +404,7 @@ class GraphPipeline {
         edge.flow = 0;
         edge.minCrossSectionOfThisPart = edge.crossSection;
       }
-      sourceEdge!.temperature = 293.15;
+      sourceEdge!.temperature = 283.15;
       sourceEdge.p1.pressure = sourceEdge.pressure;
       sourceEdge.p2.pressure = sourceEdge.pressure;
       sourceEdge.sourceFlow = 0;

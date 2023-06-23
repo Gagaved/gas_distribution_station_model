@@ -7,10 +7,12 @@ class PipelineInformationCardWidget extends StatelessWidget {
   static TextEditingController sinkFlowValueTextController =
   TextEditingController();
   static TextEditingController lenValueTextController = TextEditingController();
+  static TextEditingController diamValueTextController = TextEditingController();
   static TextEditingController sourcePressureValueTextController = TextEditingController();
   @override
   Widget build(BuildContext context) {
     sinkFlowValueTextController.text = (edge.targetFlow*3600).toString();
+    diamValueTextController.text = edge.diam.toString();
     lenValueTextController.text = edge.len.toString();
     sourcePressureValueTextController.text = (edge.pressure/1000000).toString();
     return Card(
@@ -62,6 +64,25 @@ class PipelineInformationCardWidget extends StatelessWidget {
                 },
                 decoration: const InputDecoration(
                   labelText: 'Длина м',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            Container(
+              width: 150,
+              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+              child: TextField(
+                keyboardType: TextInputType.number,
+                controller: diamValueTextController,
+                onChanged: (str) {
+                  context.read<EditorPageBloc>().add(
+                      GdsDiamElementChangeEvent(
+                          double.parse(
+                              diamValueTextController.value.text),
+                    edge));
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Диаметр, м',
                   border: OutlineInputBorder(),
                 ),
               ),

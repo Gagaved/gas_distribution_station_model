@@ -141,7 +141,7 @@ class PipelineInformationCardWidget extends StatelessWidget {
                 max: 600,
                 min: 0,
                 divisions: 10,
-                label: "Мощность подогревателя: ${edge.heaterPower} МВт",
+                label: "Мощность подогревателя: ${edge.heaterPower} КВт",
                 onChanged: (double value) {
                   context.read<ViewerPageBloc>().add(
                       GdsHeaterPowerElementChangeViewerEvent(

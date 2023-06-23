@@ -97,6 +97,10 @@ class EditorPageBloc extends Bloc<EditorEvent, GdsState> {
       event.element.len = event.value;
       //emit(GdsMainState(graph!, _selectedElement, _selectedType!,calculateStatus));
     });
+    on<GdsDiamElementChangeEvent>((event, emit) {
+      event.element.diam = event.value;
+      //emit(GdsMainState(graph!, _selectedElement, _selectedType!,calculateStatus));
+    });
     on<GdsSourcePressureElementChangeEvent>((event, emit) {
       event.element.pressure = event.value * 1000000;
     });
@@ -120,6 +124,8 @@ class EditorPageBloc extends Bloc<EditorEvent, GdsState> {
       emit(EditorMainState(
           graph, _selectedElement, _selectedType!, calculateStatus));
     });
+
+
     _selectedType = PipelineElementType.segment;
     emit(EditorMainState(
         graph, _selectedElement, _selectedType!, calculateStatus));

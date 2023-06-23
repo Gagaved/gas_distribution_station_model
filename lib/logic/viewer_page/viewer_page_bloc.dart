@@ -1,10 +1,9 @@
 import 'dart:ui';
 
-import 'package:bloc/bloc.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gas_distribution_station_model/models/graph_model.dart';
 import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
-import 'package:meta/meta.dart';
-
 part 'viewer_page_event.dart';
 
 part 'viewer_page_state.dart';
