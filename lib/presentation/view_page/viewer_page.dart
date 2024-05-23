@@ -2,13 +2,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gas_distribution_station_model/globals.dart' as globals;
 import 'package:gas_distribution_station_model/logic/viewer_page/viewer_page_bloc.dart';
 import 'package:gas_distribution_station_model/models/graph_model.dart';
 import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
-import 'package:gas_distribution_station_model/globals.dart' as globals;
+import 'package:gas_distribution_station_model/presentation/grapth_visualisator/grapth_visualisator.dart';
 
 part 'pipeline_element.dart';
-
 part 'pipeline_information_card.dart';
 
 class ViewerPageWidget extends StatelessWidget {
@@ -119,9 +119,6 @@ class _PipelinePlanWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var listOfElements = <Widget>[];
-    listOfElements.add(Container(
-      color: Colors.black12,
-    ));
     var edgesMap = (state).graph.edges;
     for (GraphEdge edge in edgesMap.values) {
       if (edge != state.selectedEdge) {
@@ -133,22 +130,7 @@ class _PipelinePlanWidget extends StatelessWidget {
           .add(_getWidgetFromEdge(state.selectedEdge!, isSelect: true));
     }
     return Expanded(
-      child: Stack(alignment: AlignmentDirectional.bottomEnd, children: [
-        InteractiveViewer(
-          maxScale: 2.5,
-          minScale: 0.5,
-          transformationController: _transformationController,
-          child: Stack(children: listOfElements),
-        ),
-        state.calculateStatus == CalculateStatus.process
-            ? Expanded(
-                child: Container(
-                  color: Colors.black38,
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-              )
-            : const SizedBox.shrink()
-      ]),
+      child: InfiniteSurface(children: listOfElements),
     );
   }
 }

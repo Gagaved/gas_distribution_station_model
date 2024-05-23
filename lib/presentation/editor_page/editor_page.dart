@@ -2,10 +2,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gas_distribution_station_model/globals.dart' as globals;
 import 'package:gas_distribution_station_model/logic/editor_page/editor_bloc.dart';
 import 'package:gas_distribution_station_model/models/graph_model.dart';
 import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
-import 'package:gas_distribution_station_model/globals.dart' as globals;
+
+import '../grapth_visualisator/grapth_visualisator.dart';
+
 //import 'package:gas_distribution_station_model/presentation/editor_page/clear_confirmation_popup.dart';
 //import 'package:gas_distribution_station_model/presentation/editor_page/pipeline_element.dart';
 part 'clear_confirmation_popup.dart';
@@ -35,6 +38,7 @@ class EditorPageWidget extends StatelessWidget {
                   ///
                   /// Панель иструментов редактора
                   _EditorToolsWidget(state: state),
+
                   ///
                   ///
                   /// Рабочее поле редактора на котором отображается элементы редактора
@@ -63,77 +67,76 @@ class _EditorToolsWidget extends StatelessWidget {
         Container(
           width: 200,
           height: double.maxFinite,
-          child: ListView(
-              shrinkWrap: true,
+          child: ListView(shrinkWrap: true, children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(3.0),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          context.read<EditorPageBloc>().add(ExportGdsToFileEvent());
-                        },
-                        child: const Row(
-                          children: [
-                            Icon(Icons.save),
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text("Экпорт"),
-                            ),
-                          ],
+                Padding(
+                  padding: const EdgeInsets.all(3.0),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      context
+                          .read<EditorPageBloc>()
+                          .add(ExportGdsToFileEvent());
+                    },
+                    child: const Row(
+                      children: [
+                        Icon(Icons.save),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text("Экпорт"),
                         ),
-                      ),
+                      ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(3.0),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          context.read<EditorPageBloc>().add(LoadFromFileEvent());
-                        },
-                        child: const Row(
-                          children: [
-                            Icon(Icons.upload_file_sharp),
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text("Импорт"),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(3.0),
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          bool? wasDelete = await showDialog<bool>(
-                              context: context,
-                              builder: (_) {
-                                return const ClearConfirmationPopup();
-                              });
-                          print("was delete:$wasDelete");
-                          if (wasDelete != null && wasDelete) {
-                            context
-                                .read<EditorPageBloc>()
-                                .add(ClearButtonPressEditorEvent());
-                            try {
-                            } catch (_) {}
-                          }
-                        },
-                        child: const Row(
-                          children: [
-                            Icon(Icons.delete_forever),
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text("Очистить"),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.all(3.0),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      context.read<EditorPageBloc>().add(LoadFromFileEvent());
+                    },
+                    child: const Row(
+                      children: [
+                        Icon(Icons.upload_file_sharp),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text("Импорт"),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(3.0),
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      bool? wasDelete = await showDialog<bool>(
+                          context: context,
+                          builder: (_) {
+                            return const ClearConfirmationPopup();
+                          });
+                      print("was delete:$wasDelete");
+                      if (wasDelete != null && wasDelete) {
+                        context
+                            .read<EditorPageBloc>()
+                            .add(ClearButtonPressEditorEvent());
+                        try {} catch (_) {}
+                      }
+                    },
+                    child: const Row(
+                      children: [
+                        Icon(Icons.delete_forever),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text("Очистить"),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
             state.selectedEdge != null
                 ? PipelineInformationCardWidget(
                     edge: state.selectedEdge!,
@@ -149,18 +152,11 @@ class _EditorToolsWidget extends StatelessWidget {
 
 class _PipelinePlanWidget extends StatelessWidget {
   final EditorMainState state;
-
-  static final TransformationController _transformationController =
-      TransformationController();
-
   const _PipelinePlanWidget({required this.state});
 
   @override
   Widget build(BuildContext context) {
     var listOfElements = <Widget>[];
-    listOfElements.add(Container(
-      color: Colors.black12,
-    ));
     var edgesMap = (state).graph.edges;
     for (GraphEdge edge in edgesMap.values) {
       if (edge != state.selectedEdge) {
@@ -172,21 +168,9 @@ class _PipelinePlanWidget extends StatelessWidget {
           .add(_getWidgetFromEdge(state.selectedEdge!, isSelect: true));
     }
     return Expanded(
-      child: Stack(alignment: AlignmentDirectional.bottomEnd, children: [
-        InteractiveViewer(
-          maxScale: 2.5,
-          minScale: 0.5,
-          transformationController: _transformationController,
-          child: Stack(children: listOfElements),
-        ),
-        state.calculateStatus == CalculateStatus.process
-            ? Container(
-              color: Colors.black38,
-              child: const Center(child: CircularProgressIndicator()),
-            )
-            : const SizedBox.shrink()
-      ]),
-    );
+        child: InfiniteSurface(
+      children: listOfElements,
+    ));
   }
 }
 

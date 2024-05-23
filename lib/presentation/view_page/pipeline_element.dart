@@ -1,4 +1,3 @@
-
 part of 'viewer_page.dart';
 
 double _getAngle(Offset p1, Offset p2) {
@@ -48,7 +47,6 @@ class PipelineWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    int id = edge.id;
     Offset p1 = edge.p1.position;
     Offset p2 = edge.p2.position;
     double dragPointSize = 10.0;
@@ -100,7 +98,9 @@ class PipelineWidget extends StatelessWidget {
                   child: Container(
                     width: dragPointSize,
                     height: dragPointSize,
-                    color: isSelect ? globals.AdditionalColors.planBorderElement : null,
+                    color: isSelect
+                        ? globals.AdditionalColors.planBorderElement
+                        : null,
                   ),
                 ),
               ),
@@ -120,7 +120,9 @@ class PipelineWidget extends StatelessWidget {
                   child: Container(
                     width: dragPointSize,
                     height: dragPointSize,
-                    color: isSelect ? globals.AdditionalColors.planBorderElement : null,
+                    color: isSelect
+                        ? globals.AdditionalColors.planBorderElement
+                        : null,
                   ),
                 ),
               ),
@@ -266,8 +268,7 @@ class PipelineAdorizerWidget extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 15.0),
             child: SizedBox(
-                width: 30,
-                child: Image.asset("assets/adorizer_image.png")),
+                width: 30, child: Image.asset("assets/adorizer_image.png")),
           ),
         ));
   }
@@ -289,8 +290,7 @@ class PipelineFilterWidget extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 15.0),
             child: SizedBox(
-                width: 30,
-                child: Image.asset("assets/filter_image.png")),
+                width: 30, child: Image.asset("assets/filter_image.png")),
           ),
         ));
   }
@@ -339,6 +339,7 @@ class PipelineReducerWidget extends StatelessWidget {
         ));
   }
 }
+
 class PipelineMeterWidget extends StatelessWidget {
   final GraphEdge edge;
   final bool isSelect;
