@@ -22,15 +22,16 @@ import 'package:flutter/material.dart';
 class InfiniteSurface extends StatefulWidget {
   final List<Widget> children;
 
-  const InfiniteSurface({super.key, required this.children});
-
+  const InfiniteSurface(
+      {super.key,
+      required this.children,
+      required this.transformationController});
+  final TransformationController transformationController;
   @override
   InfiniteSurfaceState createState() => InfiniteSurfaceState();
 }
 
 class InfiniteSurfaceState extends State<InfiniteSurface> {
-  final TransformationController _transformationController =
-      TransformationController();
   Offset _currentOffset = Offset.zero;
 
   @override
@@ -39,7 +40,7 @@ class InfiniteSurfaceState extends State<InfiniteSurface> {
       body: Center(
         child: InteractiveViewer(
           scaleFactor: 400,
-          transformationController: _transformationController,
+          transformationController: widget.transformationController,
           boundaryMargin: const EdgeInsets.all(double.infinity),
           minScale: 0.1,
           maxScale: 10.0,
@@ -55,7 +56,7 @@ class InfiniteSurfaceState extends State<InfiniteSurface> {
               CustomPaint(
                 size: Size.infinite,
                 painter: InfiniteSpacePainter(
-                    _transformationController.value, _currentOffset),
+                    widget.transformationController.value, _currentOffset),
               ),
               ...widget.children,
             ],

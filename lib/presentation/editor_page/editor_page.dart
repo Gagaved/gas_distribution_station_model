@@ -1,83 +1,63 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:gas_distribution_station_model/globals.dart' as globals;
-import 'package:gas_distribution_station_model/logic/editor_page/editor_bloc.dart';
-import 'package:gas_distribution_station_model/models/graph_model.dart';
 import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
+import 'package:gas_distribution_station_model/presentation/editor_page/editor_state_mobx.dart';
+import 'package:provider/provider.dart';
 
+import '../../models/gas_network.dart';
 import '../grapth_visualisator/grapth_visualisator.dart';
+import 'tools/on_cursor_tool_painter.dart';
 
-//import 'package:gas_distribution_station_model/presentation/editor_page/clear_confirmation_popup.dart';
-//import 'package:gas_distribution_station_model/presentation/editor_page/pipeline_element.dart';
-part 'clear_confirmation_popup.dart';
 part 'pipeline_element.dart';
 part 'pipeline_information_card.dart';
+//import 'package:gas_distribution_station_model/presentation/editor_page/clear_confirmation_popup.dart';
+//import 'package:gas_distribution_station_model/presentation/editor_page/pipeline_element.dart';
+part 'tools/clear_confirmation_popup.dart';
 
 class EditorPageWidget extends StatelessWidget {
   const EditorPageWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<EditorPageBloc>(
-        create: (context) => EditorPageBloc(),
-        child: BlocBuilder<EditorPageBloc, GdsState>(
-          builder: (context, state) {
-            if (state is EditorInitialState) {
-              return const CircularProgressIndicator();
-            }
-            if (state is EditorLoadingState) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state is EditorMainState) {
-              return Scaffold(
-                  body: Row(
-                children: [
-                  ///
-                  ///
-                  /// Панель иструментов редактора
-                  _EditorToolsWidget(state: state),
+    return Provider(
+        create: (context) => EditorStateStore()..init(),
+        child: const Scaffold(
+            body: Row(
+          children: [
+            /// Панель иструментов редактора
+            _EditorToolsWidget(),
 
-                  ///
-                  ///
-                  /// Рабочее поле редактора на котором отображается элементы редактора
-                  _PipelinePlanWidget(
-                    state: state,
-                  ),
-                ],
-              ));
-            } else {
-              return ErrorWidget("unexpected state: $state");
-            }
-          },
-        ));
+            /// Рабочее поле редактора на котором отображается элементы редактора
+            _PipelinePlanWidget(),
+          ],
+        )));
   }
 }
 
 class _EditorToolsWidget extends StatelessWidget {
-  final EditorMainState state;
-
-  const _EditorToolsWidget({required this.state});
+  const _EditorToolsWidget();
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
+        SizedBox(
           width: 200,
-          height: double.maxFinite,
-          child: ListView(shrinkWrap: true, children: [
+          child: ListView(children: [
             Column(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Padding(
                   padding: const EdgeInsets.all(3.0),
                   child: ElevatedButton(
                     onPressed: () {
-                      context
-                          .read<EditorPageBloc>()
-                          .add(ExportGdsToFileEvent());
+                      EditorState.of(context).exportToFile();
                     },
                     child: const Row(
                       children: [
@@ -94,7 +74,7 @@ class _EditorToolsWidget extends StatelessWidget {
                   padding: const EdgeInsets.all(3.0),
                   child: ElevatedButton(
                     onPressed: () {
-                      context.read<EditorPageBloc>().add(LoadFromFileEvent());
+                      EditorState.of(context).loadFromFile();
                     },
                     child: const Row(
                       children: [
@@ -118,9 +98,7 @@ class _EditorToolsWidget extends StatelessWidget {
                           });
                       print("was delete:$wasDelete");
                       if (wasDelete != null && wasDelete) {
-                        context
-                            .read<EditorPageBloc>()
-                            .add(ClearButtonPressEditorEvent());
+                        EditorState.of(context).clear();
                         try {} catch (_) {}
                       }
                     },
@@ -137,11 +115,7 @@ class _EditorToolsWidget extends StatelessWidget {
                 ),
               ],
             ),
-            state.selectedEdge != null
-                ? PipelineInformationCardWidget(
-                    edge: state.selectedEdge!,
-                  )
-                : const SizedBox.shrink(),
+            const PipelineInformationCardWidget(),
             const _PipelinePanelWidget()
           ]),
         ),
@@ -150,53 +124,111 @@ class _EditorToolsWidget extends StatelessWidget {
   }
 }
 
-class _PipelinePlanWidget extends StatelessWidget {
-  final EditorMainState state;
-  const _PipelinePlanWidget({required this.state});
+class _PipelinePlanWidget extends StatefulObserverWidget {
+  const _PipelinePlanWidget();
 
   @override
-  Widget build(BuildContext context) {
-    var listOfElements = <Widget>[];
-    var edgesMap = (state).graph.edges;
-    for (GraphEdge edge in edgesMap.values) {
-      if (edge != state.selectedEdge) {
-        listOfElements.add(_getWidgetFromEdge(edge, isSelect: false));
-      }
-    }
-    if (state.selectedEdge != null) {
-      listOfElements
-          .add(_getWidgetFromEdge(state.selectedEdge!, isSelect: true));
-    }
-    return Expanded(
-        child: InfiniteSurface(
-      children: listOfElements,
-    ));
-  }
+  State<_PipelinePlanWidget> createState() => _PipelinePlanWidgetState();
 }
 
-Widget _getWidgetFromEdge(GraphEdge edge, {required bool isSelect}) {
-  switch (edge.type) {
-    case PipelineElementType.valve:
-      return PipelineValveWidget(edge: edge, isSelect: isSelect);
-    case PipelineElementType.segment:
-      return PipelineSegmentWidget(edge: edge, isSelect: isSelect);
-    case PipelineElementType.percentageValve:
-      return PipelinePercentageValveWidget(
-        edge: edge,
-        isSelect: isSelect,
-      );
-    case PipelineElementType.heater:
-      return PipelineHeaterWidget(edge: edge, isSelect: isSelect);
-    case PipelineElementType.reducer:
-      return PipelineReducerWidget(edge: edge, isSelect: isSelect);
-    case PipelineElementType.meter:
-      return PipelineMeterWidget(edge: edge, isSelect: isSelect);
-    case PipelineElementType.filter:
-      return PipelineFilterWidget(edge: edge, isSelect: isSelect);
-    case PipelineElementType.adorizer:
-      return PipelineAdorizerWidget(edge: edge, isSelect: isSelect);
-    default:
-      return PipelineSegmentWidget(edge: edge, isSelect: isSelect);
+class _PipelinePlanWidgetState extends State<_PipelinePlanWidget> {
+  final TransformationController transformationController =
+      TransformationController();
+  final focusNode = FocusNode();
+  @override
+  Widget build(BuildContext context) {
+    final stateStore = EditorState.of(context);
+    var listOfElements = <Widget>[];
+
+    // List<Edge>? sortedEdges = stateStore.graph.edges;
+    // sortedEdges.sort((a, b) {
+    //   if (a == selectedEdge) {
+    //     return 1; // перемещаем выбранное ребро в конец списка
+    //   } else if (b == selectedEdge) {
+    //     return -1; // перемещаем выбранное ребро в конец списка
+    //   }
+    //   return 0; // остальные ребра остаются на месте
+    // });
+    {
+      for (Edge edge in stateStore.edges) {
+        bool isSelect = stateStore.selectedElementIds.lookup(edge.id) != null;
+        switch (edge.type) {
+          case PipelineEdgeType.valve:
+            listOfElements
+                .add(PipelineValveWidget(edge: edge, isSelect: isSelect));
+            break;
+          case PipelineEdgeType.segment:
+            listOfElements
+                .add(PipelineSegmentWidget(edge: edge, isSelect: isSelect));
+            break;
+          case PipelineEdgeType.percentageValve:
+            listOfElements.add(
+                PipelinePercentageValveWidget(edge: edge, isSelect: isSelect));
+            break;
+          case PipelineEdgeType.heater:
+            listOfElements
+                .add(PipelineHeaterWidget(edge: edge, isSelect: isSelect));
+            break;
+          case PipelineEdgeType.reducer:
+            listOfElements
+                .add(PipelineReducerWidget(edge: edge, isSelect: isSelect));
+            break;
+          case PipelineEdgeType.meter:
+            listOfElements
+                .add(PipelineMeterWidget(edge: edge, isSelect: isSelect));
+            break;
+          case PipelineEdgeType.filter:
+            listOfElements
+                .add(PipelineFilterWidget(edge: edge, isSelect: isSelect));
+            break;
+          case PipelineEdgeType.adorizer:
+            listOfElements
+                .add(PipelineAdorizerWidget(edge: edge, isSelect: isSelect));
+            break;
+          default:
+            listOfElements
+                .add(PipelineSegmentWidget(edge: edge, isSelect: isSelect));
+            break;
+        }
+      }
+      for (Node node in stateStore.nodes) {
+        bool isSelect = stateStore.selectedElementIds.lookup(node.id) != null;
+        listOfElements.add(PipelineWidget.node(
+          node: node,
+          isSelect: isSelect,
+        ));
+      }
+    }
+
+    return Expanded(
+        child: KeyboardListener(
+      autofocus: true,
+      onKeyEvent: (KeyEvent keyEvent) {
+        if (LogicalKeyboardKey.escape == keyEvent.logicalKey) {
+          stateStore.deselectElements();
+        }
+        print(keyEvent);
+      },
+      focusNode: focusNode,
+      child: GestureDetector(
+        onTapDown: (TapDownDetails details) {
+          if (stateStore.selectedTool != null) {
+            stateStore.createElement(
+              transformationController.toScene(details.localPosition),
+            );
+          }
+        },
+        onSecondaryTapDown: (TapDownDetails details) {
+          stateStore.deselectElements();
+        },
+        child: OnCursorSelectedToolPainter(
+          child: InfiniteSurface(
+            transformationController: transformationController,
+            children: listOfElements,
+          ),
+        ),
+      ),
+    ));
   }
 }
 
@@ -208,93 +240,60 @@ class _PipelinePanelWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<EditorPageBloc, GdsState>(
-      builder: (context, state) {
-        if (state is EditorMainState) {
-          if (state.selectedEdge != null) {
-            _flowFieldController.text = state.selectedEdge!.diam.toString();
-          }
-          var edgeTypes = PipelineElementType.values;
-          return Card(
-            elevation: 10,
-            child: SizedBox(
-              width: 200,
-              height: 170,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Scrollbar(
-                      controller: _scrollController,
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        itemCount: edgeTypes.length,
-                        scrollDirection: Axis.horizontal,
-                        itemBuilder: (BuildContext con, int index) {
-                          return GestureDetector(
-                              onTap: () {
-                                context.read<EditorPageBloc>().add(
-                                    ChangeSelectedTypeInPanelEditorEvent(
-                                        edgeTypes[index]));
-                              },
-                              child: Container(
-                                height: 200,
-                                padding: const EdgeInsets.all(5.0),
-                                child: Card(
-                                  elevation: 5,
-                                  color: state.selectedType == edgeTypes[index]
-                                      ? Theme.of(context).primaryColor
-                                      : null,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(3.0),
-                                    child: Center(
-                                        child: Text(
-                                      edgeTypes[index].name,
-                                      style: TextStyle(
-                                        color: state.selectedType ==
-                                                edgeTypes[index]
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .onPrimary
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                      ),
-                                    )),
-                                  ),
-                                ),
-                              ));
-                        },
+    final stateStore = EditorState.of(context);
+    const toolTypes = ToolType.values;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Scrollbar(
+          controller: _scrollController,
+          child: SizedBox(
+            height: 60,
+            child: ListView.builder(
+              controller: _scrollController,
+              itemCount: toolTypes.length,
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (BuildContext con, int index) {
+                return GestureDetector(onTap: () {
+                  EditorState.of(context)
+                      .changeSelectedToolType(toolTypes[index]);
+                }, child: Observer(builder: (context) {
+                  return Container(
+                    padding: const EdgeInsets.all(5.0),
+                    child: Card(
+                      elevation: 5,
+                      color: stateStore.selectedTool == toolTypes[index]
+                          ? Theme.of(context).primaryColor
+                          : null,
+                      child: Padding(
+                        padding: const EdgeInsets.all(3.0),
+                        child: Center(
+                          child: Text(
+                            toolTypes[index].name,
+                            style: TextStyle(
+                              color: stateStore.selectedTool == toolTypes[index]
+                                  ? Theme.of(context).colorScheme.onPrimary
+                                  : Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  TextField(
-                    keyboardType: TextInputType.number,
-                    controller: _flowFieldController,
-                    decoration: const InputDecoration(
-                      labelText: 'Диаметр, м',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          context.read<EditorPageBloc>().add(
-                              AddElementButtonPressEditorEvent(
-                                  double.parse(_flowFieldController.text)));
-                        },
-                        child: Text('Добавить ${state.selectedType.name}'),
-                      ))
-                  //const TextField(),
-                  //const TextField(),
-                ],
-              ),
+                  );
+                }));
+              },
             ),
-          );
-        } else {
-          return const CircularProgressIndicator();
-        }
-      },
+          ),
+        ),
+        TextField(
+          keyboardType: TextInputType.number,
+          controller: _flowFieldController,
+          decoration: const InputDecoration(
+            labelText: 'Диаметр, м',
+            border: OutlineInputBorder(),
+          ),
+        ),
+      ],
     );
   }
 }

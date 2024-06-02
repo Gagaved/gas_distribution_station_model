@@ -1,4 +1,5 @@
-part of 'editor_page.dart';
+part of '../editor_page.dart';
+
 ///
 ///
 /// Всплывающее окно подтверждения при очистке плана
@@ -37,10 +38,8 @@ class ClearConfirmationPopup extends StatelessWidget {
           ),
           child: Text(
             'Очистить',
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontSize: 20, fontWeight: FontWeight.w500,color:  Colors.red),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontSize: 20, fontWeight: FontWeight.w500, color: Colors.red),
           ),
         ),
       ],
