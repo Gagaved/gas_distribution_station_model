@@ -1,3 +1,4 @@
+import 'package:defer_pointer/defer_pointer.dart';
 import 'package:flutter/material.dart';
 
 // void main() {
@@ -38,28 +39,30 @@ class InfiniteSurfaceState extends State<InfiniteSurface> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: InteractiveViewer(
-          scaleFactor: 400,
-          transformationController: widget.transformationController,
-          boundaryMargin: const EdgeInsets.all(double.infinity),
-          minScale: 0.1,
-          maxScale: 10.0,
-          onInteractionUpdate: (ScaleUpdateDetails details) {
-            setState(() {
-              _currentOffset += details.focalPointDelta;
-            });
-          },
-          interactionEndFrictionCoefficient: 100000,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              CustomPaint(
-                size: Size.infinite,
-                painter: InfiniteSpacePainter(
-                    widget.transformationController.value, _currentOffset),
-              ),
-              ...widget.children,
-            ],
+        child: DeferredPointerHandler(
+          child: InteractiveViewer(
+            scaleFactor: 400,
+            transformationController: widget.transformationController,
+            boundaryMargin: const EdgeInsets.all(double.infinity),
+            minScale: 0.1,
+            maxScale: 10.0,
+            onInteractionUpdate: (ScaleUpdateDetails details) {
+              setState(() {
+                _currentOffset += details.focalPointDelta;
+              });
+            },
+            interactionEndFrictionCoefficient: 100000,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                CustomPaint(
+                  size: Size.infinite,
+                  painter: InfiniteSpacePainter(
+                      widget.transformationController.value, _currentOffset),
+                ),
+                ...widget.children,
+              ],
+            ),
           ),
         ),
       ),

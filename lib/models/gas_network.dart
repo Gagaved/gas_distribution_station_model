@@ -13,6 +13,7 @@ part 'gas_network.mapper.dart';
 sealed class GraphElement {
   static const Uuid _uuid = Uuid();
   final String id;
+
   GraphElement() : id = GraphElement._uuid.v1();
 }
 
@@ -20,16 +21,36 @@ sealed class GraphElement {
 class Edge extends GraphElement with EdgeMappable {
   String startNodeId;
   String endNodeId;
-  double diameter; // Диаметр трубы (ребра) в метрах
-  double length; // Длина трубы (ребра) в метрах
-  double roughness; // Шероховатость внутренней поверхности трубы (ребра)
+
+  /// Диаметр трубы (ребра) в метрах
+  double diameter;
+
+  /// Длина трубы (ребра) в метрах
+  double length;
+
+  /// Шероховатость внутренней поверхности трубы (ребра)
+  double roughness;
+
   double _conductance;
 
-  double get conductance =>
-      _conductance; // Коэффициент проводимости для расчета потока газа через ребро
-  double flow = 0.0; // Расход газа через ребро, вычисляется в процессе расчета
+  /// Коэффициент проводимости для расчета потока газа через ребро
+  double get conductance => _conductance;
 
-  PipelineEdgeType type;
+  /// Расход газа через ребро, вычисляется в процессе расчета
+  double flow = 0.0;
+
+  ///Процент открытия крана на этом участке,
+  /// влияет только если EdgeType.valve или EdgeType.percentageValve
+  /// 0 <= percentageValve <= 1
+  double _percentageValve = 0;
+
+  double get percentageValve => _percentageValve;
+
+  set percentageValve(double value) {
+    _percentageValve = min(max(value, 0), 1);
+  }
+
+  EdgeType type;
 
   Edge(
     this.startNodeId,
@@ -37,54 +58,53 @@ class Edge extends GraphElement with EdgeMappable {
     this.diameter,
     this.length,
     this.roughness, {
-    this.type = PipelineEdgeType.segment,
+    this.type = EdgeType.segment,
   }) : _conductance = 0.0;
+}
+
+enum NodeType {
+  base('Точка'),
+  sink('Сток'),
+  source('Источник');
+
+  const NodeType(this.value);
+
+  final String value;
 }
 
 @MappableClass()
 class Node extends GraphElement with NodeMappable {
-  double _pressure; // Давление в узле (точке) в Паскалях
+  ///Тип участка трубы
+  NodeType type;
 
-  double get pressure => _pressure;
-  bool _isSource;
+  ///Давление в точке, задается вручную для NodeType.source,
+  /// для остальных случаев расчитывается алгоримом
+  double pressure;
 
-  bool get isSource => _isSource;
-  bool _isSink;
-
-  bool get isSink => _isSink;
-
+  ///
+  /// Позиция точки в графе
   Offset position;
 
-  Node.source({required this.position, required double pressure})
-      : _pressure = pressure,
-        _isSource = true,
-        _isSink = false;
-
-  Node.sink({
-    required this.position,
-  })  : _pressure = 0,
-        _isSource = false,
-        _isSink = true;
-
   Node({
-    bool isSource = false,
-    bool isSink = false,
+    this.type = NodeType.base,
     required this.position,
-  })  : _isSink = isSink,
-        _isSource = isSource,
-        _pressure = 0; // Давление по умолчанию - 0 Паскалей;
+    this.pressure = 0,
+  }); // Давление по умолчанию - 0 Паскалей;
 }
 
 @MappableClass()
 final class GasNetwork with GasNetworkMappable {
   List<Node> nodes;
   List<Edge> edges;
+
   Node nodeById(String id) {
     return nodes.firstWhere((element) => element.id == id);
   }
 
   getElementById(String id) {
-    return [...nodes, ...edges].firstWhere((element) => element.id == id);
+    return [...nodes, ...edges]
+        .where((element) => element.id == id)
+        .firstOrNull;
   }
 
   GasNetwork({required this.nodes, required this.edges});
@@ -133,7 +153,7 @@ final class GasNetwork with GasNetworkMappable {
     do {
       hasConverged = true;
       for (var node in nodes) {
-        if (node.isSource || node.isSink) {
+        if (node.type != NodeType.base) {
           continue;
         }
 
@@ -159,7 +179,7 @@ final class GasNetwork with GasNetworkMappable {
         }
 
         if (denominator > 0) {
-          node._pressure = numerator / denominator;
+          node.pressure = numerator / denominator;
         }
 
         if ((node.pressure - prevPressure).abs() > epsilon) {
@@ -258,13 +278,16 @@ final class GasNetwork with GasNetworkMappable {
 void main() {
   // Определяем узлы
   var nodes = [
-    Node.source(
+    Node(
+        type: NodeType.source,
         pressure: 50.0,
         position: const Offset(0, 0)), // P0, источник с постоянным давлением
     Node(position: const Offset(1, 0)), // P1
     Node(position: const Offset(2, 0)), // P2
     Node(position: const Offset(3, 0)), // P3
-    Node.sink(position: const Offset(4, 0)) // P4, сток с максимальным расходом
+    Node(
+        type: NodeType.sink,
+        position: const Offset(4, 0)) // P4, сток с максимальным расходом
   ];
 
   // Определяем рёбра (трубопроводы)

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:defer_pointer/defer_pointer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -7,10 +8,13 @@ import 'package:gas_distribution_station_model/globals.dart' as globals;
 import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
 import 'package:gas_distribution_station_model/presentation/editor_page/editor_state_mobx.dart';
 import 'package:provider/provider.dart';
+import 'package:transparent_pointer/transparent_pointer.dart';
 
 import '../../models/gas_network.dart';
 import '../grapth_visualisator/grapth_visualisator.dart';
-import 'tools/on_cursor_tool_painter.dart';
+import 'tools/mouse_region_mobx.dart';
+import 'tools/on_cursor_tool_painter_mobx.dart';
+import 'tools/selected_element_panel.dart';
 
 part 'pipeline_element.dart';
 part 'pipeline_information_card.dart';
@@ -139,49 +143,39 @@ class _PipelinePlanWidgetState extends State<_PipelinePlanWidget> {
   Widget build(BuildContext context) {
     final stateStore = EditorState.of(context);
     var listOfElements = <Widget>[];
-
-    // List<Edge>? sortedEdges = stateStore.graph.edges;
-    // sortedEdges.sort((a, b) {
-    //   if (a == selectedEdge) {
-    //     return 1; // перемещаем выбранное ребро в конец списка
-    //   } else if (b == selectedEdge) {
-    //     return -1; // перемещаем выбранное ребро в конец списка
-    //   }
-    //   return 0; // остальные ребра остаются на месте
-    // });
     {
       for (Edge edge in stateStore.edges) {
         bool isSelect = stateStore.selectedElementIds.lookup(edge.id) != null;
         switch (edge.type) {
-          case PipelineEdgeType.valve:
+          case EdgeType.valve:
             listOfElements
                 .add(PipelineValveWidget(edge: edge, isSelect: isSelect));
             break;
-          case PipelineEdgeType.segment:
+          case EdgeType.segment:
             listOfElements
                 .add(PipelineSegmentWidget(edge: edge, isSelect: isSelect));
             break;
-          case PipelineEdgeType.percentageValve:
+          case EdgeType.percentageValve:
             listOfElements.add(
                 PipelinePercentageValveWidget(edge: edge, isSelect: isSelect));
             break;
-          case PipelineEdgeType.heater:
+          case EdgeType.heater:
             listOfElements
                 .add(PipelineHeaterWidget(edge: edge, isSelect: isSelect));
             break;
-          case PipelineEdgeType.reducer:
+          case EdgeType.reducer:
             listOfElements
                 .add(PipelineReducerWidget(edge: edge, isSelect: isSelect));
             break;
-          case PipelineEdgeType.meter:
+          case EdgeType.meter:
             listOfElements
                 .add(PipelineMeterWidget(edge: edge, isSelect: isSelect));
             break;
-          case PipelineEdgeType.filter:
+          case EdgeType.filter:
             listOfElements
                 .add(PipelineFilterWidget(edge: edge, isSelect: isSelect));
             break;
-          case PipelineEdgeType.adorizer:
+          case EdgeType.adorizer:
             listOfElements
                 .add(PipelineAdorizerWidget(edge: edge, isSelect: isSelect));
             break;
@@ -199,32 +193,43 @@ class _PipelinePlanWidgetState extends State<_PipelinePlanWidget> {
         ));
       }
     }
+    listOfElements.add(const EdgeDraftProjector());
 
     return Expanded(
-        child: KeyboardListener(
-      autofocus: true,
-      onKeyEvent: (KeyEvent keyEvent) {
-        if (LogicalKeyboardKey.escape == keyEvent.logicalKey) {
-          stateStore.deselectElements();
-        }
-        print(keyEvent);
-      },
-      focusNode: focusNode,
-      child: GestureDetector(
-        onTapDown: (TapDownDetails details) {
-          if (stateStore.selectedTool != null) {
-            stateStore.createElement(
-              transformationController.toScene(details.localPosition),
-            );
+        child: TransparentPointer(
+      child: KeyboardListener(
+        autofocus: true,
+        onKeyEvent: (KeyEvent keyEvent) {
+          if (LogicalKeyboardKey.escape == keyEvent.logicalKey) {
+            stateStore.deselectElements();
           }
+          print(keyEvent);
         },
-        onSecondaryTapDown: (TapDownDetails details) {
-          stateStore.deselectElements();
-        },
-        child: OnCursorSelectedToolPainter(
-          child: InfiniteSurface(
+        focusNode: focusNode,
+        child: GestureDetector(
+          onTapDown: (TapDownDetails details) {
+            if (stateStore.selectedTool != null) {
+              stateStore.createElement(
+                transformationController.toScene(details.localPosition),
+              );
+            }
+          },
+          onSecondaryTapDown: (TapDownDetails details) {
+            stateStore.deselectElements();
+          },
+          child: MouserRegionProvider(
             transformationController: transformationController,
-            children: listOfElements,
+            child: OnCursorSelectedToolPainter(
+              child: Stack(
+                children: [
+                  InfiniteSurface(
+                    transformationController: transformationController,
+                    children: listOfElements,
+                  ),
+                  const SelectedElementPanel(),
+                ],
+              ),
+            ),
           ),
         ),
       ),

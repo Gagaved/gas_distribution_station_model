@@ -42,16 +42,23 @@ abstract class EditorState with Store {
   @observable
   ObservableSet<String> selectedElementIds = ObservableSet();
 
+  @computed
+  GraphElement? get singleSelectedElement => selectedElementIds.length == 1
+      ? _graph.getElementById(selectedElementIds.first)
+      : null;
+
   @observable
   ToolType? selectedTool;
 
-  void _updateEdgesAndNodesState() {
+  @action
+  void updateEdgesAndNodesState() {
     edges = [..._graph.edges];
     nodes = [..._graph.nodes];
     if (_lastCreatedNodeIdForEdgeTool != null) {
       lastCreatedNodeForEdgeTool =
           _graph.getElementById(_lastCreatedNodeIdForEdgeTool!);
     }
+    //debugPrint('selectedElementsIds: $selectedElementIds');
   }
 
   // @action
@@ -60,12 +67,14 @@ abstract class EditorState with Store {
   //   selectedElement = newEdge;
   // }
 
+  GraphElement getGraphElementById(String id) => _graph.getElementById(id);
+
   @action
   void deleteSelectedElement() {
     for (var id in selectedElementIds) {
       _deleteElement(_graph.getElementById(id));
     }
-    _updateEdgesAndNodesState();
+    updateEdgesAndNodesState();
   }
 
   @action
@@ -84,7 +93,7 @@ abstract class EditorState with Store {
       } else {
         selectedElementIds.add(element.id);
       }
-      _updateEdgesAndNodesState();
+      updateEdgesAndNodesState();
     }
   }
 
@@ -92,15 +101,24 @@ abstract class EditorState with Store {
   void deselectElements() {
     if (selectedTool != null) {
       selectedTool = null;
+      _lastCreatedNodeIdForEdgeTool = null;
+      lastCreatedNodeForEdgeTool = null;
     } else {
       selectedElementIds.clear();
     }
-    _updateEdgesAndNodesState();
+    updateEdgesAndNodesState();
   }
 
   @action
   void moveElement(Offset offset) {
     final Set draggablePoints = <Node>{};
+
+    if (selectedElementIds.length == 1 &&
+        selectedElementIds.map((id) => _graph.getElementById(id)).first
+            is Node) {
+      moveNode(selectedElementIds.first, offset);
+      return;
+    }
     final selectedElements =
         selectedElementIds.map((id) => _graph.getElementById(id));
     selectedElements.whereType<Edge>().forEach((element) {
@@ -112,24 +130,25 @@ abstract class EditorState with Store {
       _graph.getElementById((element).id).position += offset;
     }
 
-    _updateEdgesAndNodesState();
+    updateEdgesAndNodesState();
   }
 
   @action
   void moveNode(String nodeId, Offset delta) {
     Node p = _graph.nodeById(nodeId);
     p.position += delta;
-    Node? otherPoint = magnatePoint(p);
-    if (otherPoint != null) {
-      _graph.mergePoints(p, otherPoint);
-    }
-    _updateEdgesAndNodesState();
+    mergePointIfPossible(p);
+    updateEdgesAndNodesState();
   }
 
   @action
   void changeSelectedToolType(ToolType type) {
     selectedTool = selectedTool == type ? null : type;
-    _updateEdgesAndNodesState();
+    if (selectedTool == null) {
+      _lastCreatedNodeIdForEdgeTool = null;
+      lastCreatedNodeForEdgeTool = null;
+    }
+    updateEdgesAndNodesState();
   }
 
   @observable
@@ -144,14 +163,15 @@ abstract class EditorState with Store {
         if (_lastCreatedNodeIdForEdgeTool != null) {
           final newNode = _graph.addNode(localPosition);
           _graph.link(_lastCreatedNodeIdForEdgeTool!, newNode.id, 10, 10, 1);
+          _lastCreatedNodeIdForEdgeTool = newNode.id;
         } else {
-          _lastCreatedNodeIdForEdgeTool = _graph.addNode(localPosition).id;
+          lastCreatedNodeForEdgeTool = _graph.addNode(localPosition);
+          _lastCreatedNodeIdForEdgeTool = lastCreatedNodeForEdgeTool!.id;
         }
-
       case ToolType.node:
         _graph.addNode(localPosition);
     }
-    _updateEdgesAndNodesState();
+    updateEdgesAndNodesState();
   }
 
   @action
@@ -203,20 +223,24 @@ abstract class EditorState with Store {
   Future<void> loadFromFile() async {
     // TODO: Implement this method.
   }
+  bool isMagneticSurfaceEnable = true;
+  double magneticStep = 5;
+  double magneticRadius = 3;
+  double minDeltaForce = 0.2; // Максимальное допустимое значение силы дельты
 
-  Node? magnatePoint(Node point) {
-    double magneticRange = 7;
+  Node? mergePointIfPossible(Node point) {
+    double magneticRange = 5;
     for (Node otherPoint in _graph.nodes) {
       if (point != otherPoint &&
           (point.position.dx - otherPoint.position.dx).abs() <= magneticRange &&
           (point.position.dy - otherPoint.position.dy).abs() <= magneticRange) {
         point.position = otherPoint.position;
         _graph.mergePoints(point, otherPoint);
-        _updateEdgesAndNodesState();
+        updateEdgesAndNodesState();
         return otherPoint;
       }
     }
-    _updateEdgesAndNodesState();
+    updateEdgesAndNodesState();
     return null;
   }
 
@@ -224,7 +248,7 @@ abstract class EditorState with Store {
     var p1 = _graph.addNode(const Offset(300, 300));
     var p2 = _graph.addNode(const Offset(300, 400));
     final newEdge = _graph.link(p1.id, p2.id, diam, 100, 0.0001);
-    _updateEdgesAndNodesState();
+    updateEdgesAndNodesState();
     return newEdge;
   }
 
@@ -235,7 +259,7 @@ abstract class EditorState with Store {
       case Edge():
         _graph.removeEdge(graphElement);
     }
-    _updateEdgesAndNodesState();
+    updateEdgesAndNodesState();
   }
 
   nodeById(String id) => _graph.nodeById(id);
