@@ -64,8 +64,9 @@ class PipelineInformationCardWidget extends StatelessObserverWidget {
               padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
               child: TextField(
                 keyboardType: TextInputType.number,
-                controller: lenValueTextController,
-                onChanged: (str) {
+                controller: lenValueTextController
+                  ..text = edge.length.toStringAsFixed(1),
+                onSubmitted: (value) {
                   stateStore.changeLen(
                       edge, double.parse(lenValueTextController.value.text));
                 },
@@ -91,101 +92,6 @@ class PipelineInformationCardWidget extends StatelessObserverWidget {
                 ),
               ),
             ),
-            // (edge.type == PipelineElementType.percentageValve)
-            //     ? Text(
-            //     "Открыт на ${(edge.openPercentage * 100).toInt()}%")
-            //     : const SizedBox.shrink(),
-            // (edge.type == PipelineElementType.percentageValve)
-            //     ? Slider(
-            //   value: edge.openPercentage * 100,
-            //   max: 100,
-            //   divisions: 10,
-            //   label: edge.openPercentage.toString(),
-            //   onChanged: (double value) {
-            //     context.read<EditorPageBloc>().add(
-            //         GdsThroughputFLowPercentageElementChangeEvent(
-            //             edge, value / 100));
-            //   },
-            // )
-            //     : const SizedBox.shrink(),
-            // (edge.type == PipelineElementType.sink)
-            //     ? Container(
-            //   width: 150,
-            //   padding:
-            //   const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-            //   child: TextField(
-            //     keyboardType: TextInputType.number,
-            //     controller: sinkFlowValueTextController,
-            //     onChanged: (str) {
-            //       context.read<EditorPageBloc>().add(
-            //           GdsSinkTargetFLowElementChangeEvent(
-            //               edge,
-            //               double.parse(sinkFlowValueTextController
-            //                   .value.text)/3600));
-            //     },
-            //     decoration: const InputDecoration(
-            //       labelText: 'Расход м^3/ч',
-            //       border: OutlineInputBorder(),
-            //     ),
-            //   ),
-            // )
-            //     : const SizedBox.shrink(),
-            // (edge.type == PipelineElementType.source)
-            //     ? Container(
-            //   width: 150,
-            //   padding:
-            //   const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-            //   child: TextField(
-            //     keyboardType: TextInputType.number,
-            //     controller: sourcePressureValueTextController,
-            //     onChanged: (str) {
-            //       context.read<EditorPageBloc>().add(
-            //           GdsSourcePressureElementChangeEvent(
-            //               edge,
-            //               double.parse(sourcePressureValueTextController
-            //                   .value.text)));
-            //     },
-            //     decoration: const InputDecoration(
-            //       labelText: 'Давление МПа',
-            //       border: OutlineInputBorder(),
-            //     ),
-            //   ),
-            // )
-            //     : const SizedBox.shrink(),
-            // (edge.type == PipelineElementType.reducer)
-            //     ? Text(
-            //     "Вых. давление: ${edge.targetPressure / 1000000} МПа")
-            //     : const SizedBox.shrink(),
-            // (edge.type == PipelineElementType.heater)
-            //     ?Text("Мощность подогр. ${edge.heaterPower}"):SizedBox.shrink(),
-            // (edge.type == PipelineElementType.heater)
-            //     ? Slider(
-            //   value: edge.heaterPower!,
-            //   max: 600,
-            //   min: 0,
-            //   divisions: 10,
-            //   label: "Мощность подогревателя: ${edge.heaterPower} Вт",
-            //   onChanged: (double value) {
-            //     context.read<EditorPageBloc>().add(
-            //         GdsHeaterPowerElementChangeEvent(
-            //             edge, value));
-            //   },
-            // )
-            //     : const SizedBox.shrink(),
-            // (edge.type == PipelineElementType.reducer)
-            //     ? Slider(
-            //   value: edge.targetPressure / 1000000,
-            //   max: 2,
-            //   min: 1,
-            //   divisions: 10,
-            //   label: "${edge.targetPressure / 1000000}МПа",
-            //   onChanged: (double value) {
-            //     context.read<EditorPageBloc>().add(
-            //         GdsTargetPressureReducerElementChangeEvent(
-            //             edge, value * 1000000));
-            //   },
-            // )
-            //     : const SizedBox.shrink(),
             Padding(
                 padding: const EdgeInsets.all(10),
                 child: MaterialButton(

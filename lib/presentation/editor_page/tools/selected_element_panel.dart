@@ -56,7 +56,7 @@ class _NodeEditingFields extends StatefulObserverWidget {
 class _NodeEditingFieldsState extends State<_NodeEditingFields> {
   final TextEditingController _nodeTypeController = TextEditingController();
   final TextEditingController _pressureController = TextEditingController();
-
+  final nodeTypeFocusNode = FocusNode(debugLabel: "nodeTypeFocusNode");
   @override
   Widget build(BuildContext context) {
     final stateStore = EditorState.of(context);
@@ -64,29 +64,48 @@ class _NodeEditingFieldsState extends State<_NodeEditingFields> {
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: (Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 20),
-          DropdownMenu<NodeType>(
-            initialSelection: selectedElement.type,
-            controller: _nodeTypeController,
-            requestFocusOnTap: true,
-            label: const Text('Тип'),
-            onSelected: (NodeType? type) {
+          const SizedBox(height: 10),
+          MaterialButton(
+            onPressed: () {
+              stateStore.deleteElement(selectedElement);
+            },
+            color: Colors.red,
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Удалить'),
+                Icon(
+                  Icons.delete,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          DropdownButton<NodeType>(
+            focusNode: nodeTypeFocusNode,
+            value: selectedElement.type,
+            items: NodeType.values
+                .map<DropdownMenuItem<NodeType>>((NodeType type) {
+              return DropdownMenuItem<NodeType>(
+                value: type,
+                child: Text(
+                  type.value,
+                ),
+              );
+            }).toList(),
+            onChanged: (NodeType? type) {
               setState(() {
                 if (type != null) {
                   selectedElement.type = type;
                   stateStore.updateEdgesAndNodesState();
+                  // nodeTypeFocusNode.unfocus(
+                  //     disposition: UnfocusDisposition.previouslyFocusedChild);
                 }
               });
             },
-            dropdownMenuEntries: NodeType.values
-                .map<DropdownMenuEntry<NodeType>>((NodeType type) {
-              return DropdownMenuEntry<NodeType>(
-                value: type,
-                label: type.value,
-              );
-            }).toList(),
           ),
           const SizedBox(height: 10),
           if (selectedElement.type == NodeType.source)
@@ -128,8 +147,18 @@ class _EdgeEditingFields extends StatefulObserverWidget {
 }
 
 class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
-  final TextEditingController _edgeTypeController = TextEditingController();
+  final FocusNode _edgeTypeFocusNode =
+      FocusNode(debugLabel: '_edgeTypeFocusNode');
+  final FocusNode _edgeLenFocusNode =
+      FocusNode(debugLabel: '_edgeLenFocusNode');
   final TextEditingController _pressureController = TextEditingController();
+  @override
+  void initState() {
+    _edgeTypeFocusNode.addListener(() {
+      print('');
+    });
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,15 +167,37 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: (Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 20),
-          DropdownMenu<EdgeType>(
-            initialSelection: selectedElement.type,
-            controller: _edgeTypeController,
-            requestFocusOnTap: true,
-            label: const Text('Тип'),
-            onSelected: (EdgeType? type) {
+          MaterialButton(
+            onPressed: () {
+              stateStore.deleteElement(selectedElement);
+            },
+            color: Colors.red,
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Удалить'),
+                Icon(
+                  Icons.delete,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          DropdownButton<EdgeType>(
+            value: selectedElement.type,
+            items: EdgeType.values
+                .map<DropdownMenuItem<EdgeType>>((EdgeType type) {
+              return DropdownMenuItem<EdgeType>(
+                value: type,
+                child: Text(
+                  type.value,
+                ),
+              );
+            }).toList(),
+            onChanged: (EdgeType? type) {
               setState(() {
                 if (type != null) {
                   selectedElement.type = type;
@@ -154,39 +205,40 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                 }
               });
             },
-            dropdownMenuEntries: EdgeType.values
-                .map<DropdownMenuEntry<EdgeType>>((EdgeType type) {
-              return DropdownMenuEntry<EdgeType>(
-                value: type,
-                label: type.value,
-              );
-            }).toList(),
           ),
           const SizedBox(height: 10),
           if (selectedElement.type == EdgeType.segment)
             SizedBox(
               width: 150,
-              child: TextField(
-                controller: _pressureController,
-                keyboardType: TextInputType.number,
-                onSubmitted: (value) {
+              child: Builder(builder: (context) {
+                void save() {
                   try {
+                    final value = _pressureController.text;
                     final formatedString =
                         value.replaceAllMapped(',', (f) => '.');
                     selectedElement.length = double.parse(formatedString);
                     print('set len to ${selectedElement.length}');
                     _pressureController.text = formatedString;
+                    _edgeLenFocusNode.parent?.requestFocus();
                   } catch (e) {
                     selectedElement.length = 0;
                     _pressureController.value =
                         const TextEditingValue(text: '0');
                   }
-                },
-                decoration: const InputDecoration(
-                  labelText: 'Длина, м',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+                }
+
+                return TextField(
+                  focusNode: _edgeLenFocusNode,
+                  controller: _pressureController,
+                  keyboardType: TextInputType.number,
+                  onTapOutside: (_) => save(),
+                  onEditingComplete: () => save(),
+                  decoration: const InputDecoration(
+                    labelText: 'Длина, м',
+                    border: OutlineInputBorder(),
+                  ),
+                );
+              }),
             ),
           if (selectedElement.type == EdgeType.percentageValve)
             Row(
@@ -208,12 +260,16 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
               bool isOpen = selectedElement.percentageValve != 0;
               return Row(
                 children: [
-                  ElevatedButton(
+                  MaterialButton(
                       onPressed: () {
-                        isOpen
-                            ? selectedElement.percentageValve = 0
-                            : selectedElement.percentageValve = 1;
+                        setState(() {
+                          isOpen
+                              ? selectedElement.percentageValve = 0
+                              : selectedElement.percentageValve = 1;
+                          stateStore.updateEdgesAndNodesState();
+                        });
                       },
+                      color: isOpen ? Colors.green : Colors.red,
                       child: Text(isOpen ? 'Открыт' : 'Закрыт')),
                 ],
               );

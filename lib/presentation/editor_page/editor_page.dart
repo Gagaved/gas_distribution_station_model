@@ -29,16 +29,52 @@ class EditorPageWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Provider(
         create: (context) => EditorStateStore()..init(),
-        child: const Scaffold(
-            body: Row(
-          children: [
-            /// Панель иструментов редактора
-            _EditorToolsWidget(),
+        child: const FocusScope(
+          child: _KeyboardHandler(
+            child: Row(
+              children: [
+                /// Панель иструментов редактора
+                _EditorToolsWidget(),
 
-            /// Рабочее поле редактора на котором отображается элементы редактора
-            _PipelinePlanWidget(),
-          ],
-        )));
+                /// Рабочее поле редактора на котором отображается элементы редактора
+                _PipelinePlanWidget(),
+              ],
+            ),
+          ),
+        ));
+  }
+}
+
+class _KeyboardHandler extends StatefulWidget {
+  const _KeyboardHandler({super.key, required this.child});
+  final Widget child;
+
+  @override
+  State<_KeyboardHandler> createState() => _KeyboardHandlerState();
+}
+
+class _KeyboardHandlerState extends State<_KeyboardHandler> {
+  final focusNode = FocusNode();
+  @override
+  void dispose() {
+    focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stateStore = EditorState.of(context);
+    return KeyboardListener(
+      focusNode: focusNode,
+      autofocus: true,
+      onKeyEvent: (KeyEvent keyEvent) {
+        if (LogicalKeyboardKey.escape == keyEvent.logicalKey) {
+          stateStore.deselectElements();
+        }
+        print(keyEvent);
+      },
+      child: widget.child,
+    );
   }
 }
 
@@ -119,7 +155,6 @@ class _EditorToolsWidget extends StatelessWidget {
                 ),
               ],
             ),
-            const PipelineInformationCardWidget(),
             const _PipelinePanelWidget()
           ]),
         ),
@@ -138,7 +173,11 @@ class _PipelinePlanWidget extends StatefulObserverWidget {
 class _PipelinePlanWidgetState extends State<_PipelinePlanWidget> {
   final TransformationController transformationController =
       TransformationController();
-  final focusNode = FocusNode();
+  @override
+  void initState() {
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     final stateStore = EditorState.of(context);
@@ -196,40 +235,28 @@ class _PipelinePlanWidgetState extends State<_PipelinePlanWidget> {
     listOfElements.add(const EdgeDraftProjector());
 
     return Expanded(
-        child: TransparentPointer(
-      child: KeyboardListener(
-        autofocus: true,
-        onKeyEvent: (KeyEvent keyEvent) {
-          if (LogicalKeyboardKey.escape == keyEvent.logicalKey) {
-            stateStore.deselectElements();
-          }
-          print(keyEvent);
-        },
-        focusNode: focusNode,
         child: GestureDetector(
-          onTapDown: (TapDownDetails details) {
-            if (stateStore.selectedTool != null) {
-              stateStore.createElement(
-                transformationController.toScene(details.localPosition),
-              );
-            }
-          },
-          onSecondaryTapDown: (TapDownDetails details) {
-            stateStore.deselectElements();
-          },
-          child: MouserRegionProvider(
-            transformationController: transformationController,
-            child: OnCursorSelectedToolPainter(
-              child: Stack(
-                children: [
-                  InfiniteSurface(
-                    transformationController: transformationController,
-                    children: listOfElements,
-                  ),
-                  const SelectedElementPanel(),
-                ],
+      onTapDown: (TapDownDetails details) {
+        if (stateStore.selectedTool != null) {
+          stateStore.createElement(
+            transformationController.toScene(details.localPosition),
+          );
+        }
+      },
+      onSecondaryTapDown: (TapDownDetails details) {
+        stateStore.deselectElements();
+      },
+      child: MouserRegionProvider(
+        transformationController: transformationController,
+        child: OnCursorSelectedToolPainter(
+          child: Stack(
+            children: [
+              InfiniteSurface(
+                transformationController: transformationController,
+                children: listOfElements,
               ),
-            ),
+              const SelectedElementPanel(),
+            ],
           ),
         ),
       ),
@@ -288,14 +315,6 @@ class _PipelinePanelWidget extends StatelessWidget {
                 }));
               },
             ),
-          ),
-        ),
-        TextField(
-          keyboardType: TextInputType.number,
-          controller: _flowFieldController,
-          decoration: const InputDecoration(
-            labelText: 'Диаметр, м',
-            border: OutlineInputBorder(),
           ),
         ),
       ],

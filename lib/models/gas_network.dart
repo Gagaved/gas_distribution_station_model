@@ -101,7 +101,7 @@ final class GasNetwork with GasNetworkMappable {
     return nodes.firstWhere((element) => element.id == id);
   }
 
-  getElementById(String id) {
+  GraphElement? getElementById(String id) {
     return [...nodes, ...edges]
         .where((element) => element.id == id)
         .firstOrNull;
@@ -233,9 +233,7 @@ final class GasNetwork with GasNetworkMappable {
   }
 
   // Удаление ребра по двум точкам
-  void removeEdge(Edge edge) {
-    edges.remove(edge);
-  }
+  bool removeEdge(Edge edge) => edges.remove(edge);
 
   // Добавление новой вершины в граф
   Node addNode(Offset position) {
@@ -272,7 +270,16 @@ final class GasNetwork with GasNetworkMappable {
     return targetPoint;
   }
 
-  void removeNode(Node graphElement) {}
+  bool canRemoveNode(Node node) {
+    return (edges
+        .where(
+            (edge) => edge.startNodeId == node.id || edge.endNodeId == node.id)
+        .isEmpty);
+  }
+
+  bool removeNode(Node graphElement) {
+    return (canRemoveNode(graphElement)) ? nodes.remove(graphElement) : false;
+  }
 }
 
 void main() {

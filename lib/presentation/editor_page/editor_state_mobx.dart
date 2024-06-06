@@ -54,9 +54,10 @@ abstract class EditorState with Store {
   void updateEdgesAndNodesState() {
     edges = [..._graph.edges];
     nodes = [..._graph.nodes];
+    selectedElementIds.removeWhere((id) => _graph.getElementById(id) == null);
     if (_lastCreatedNodeIdForEdgeTool != null) {
       lastCreatedNodeForEdgeTool =
-          _graph.getElementById(_lastCreatedNodeIdForEdgeTool!);
+          _graph.getElementById(_lastCreatedNodeIdForEdgeTool!) as Node?;
     }
     //debugPrint('selectedElementsIds: $selectedElementIds');
   }
@@ -67,12 +68,12 @@ abstract class EditorState with Store {
   //   selectedElement = newEdge;
   // }
 
-  GraphElement getGraphElementById(String id) => _graph.getElementById(id);
+  GraphElement getGraphElementById(String id) => _graph.getElementById(id)!;
 
   @action
   void deleteSelectedElement() {
     for (var id in selectedElementIds) {
-      _deleteElement(_graph.getElementById(id));
+      deleteElement(_graph.getElementById(id)!);
     }
     updateEdgesAndNodesState();
   }
@@ -127,7 +128,7 @@ abstract class EditorState with Store {
     });
     draggablePoints.addAll(selectedElements.whereType<Node>());
     for (var element in draggablePoints) {
-      _graph.getElementById((element).id).position += offset;
+      (_graph.getElementById((element).id) as Node).position += offset;
     }
 
     updateEdgesAndNodesState();
@@ -252,14 +253,21 @@ abstract class EditorState with Store {
     return newEdge;
   }
 
-  void _deleteElement(GraphElement graphElement) {
+  bool deleteElement(GraphElement graphElement) {
+    late final bool removeResult;
     switch (graphElement) {
       case Node():
-        _graph.removeNode(graphElement);
+        removeResult = _graph.removeNode(graphElement);
+        print('removeResult: $removeResult');
       case Edge():
-        _graph.removeEdge(graphElement);
+        removeResult = _graph.removeEdge(graphElement);
+        print('removeResult: $removeResult');
     }
-    updateEdgesAndNodesState();
+    if (removeResult) {
+      selectedElementIds.remove(graphElement.id);
+      updateEdgesAndNodesState();
+    }
+    return removeResult;
   }
 
   nodeById(String id) => _graph.nodeById(id);
