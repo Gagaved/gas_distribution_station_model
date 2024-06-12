@@ -37,21 +37,18 @@ class PipelineWidget extends StatelessWidget {
   final Edge? edge;
   final Node? node;
   final bool isSelect;
-  final Widget? child;
 
-  const PipelineWidget.edge(
-      {required this.edge,
-      super.key,
-      required this.isSelect,
-      required this.child})
-      : node = null;
+  const PipelineWidget.edge({
+    required this.edge,
+    super.key,
+    required this.isSelect,
+  }) : node = null;
 
   const PipelineWidget.node({
     required this.node,
     super.key,
     required this.isSelect,
-  })  : edge = null,
-        child = null;
+  }) : edge = null;
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +76,7 @@ class PipelineWidget extends StatelessWidget {
                     color: isSelect
                         ? globals.AdditionalColors.planBorderElement
                             .withOpacity(0.5)
-                        : Colors.black26,
+                        : Colors.black12,
                     border: Border.all(
                       width: dragPointSize / 10,
                       color: switch (node!.type) {
@@ -104,7 +101,8 @@ class PipelineWidget extends StatelessWidget {
       double containerWidth = (p1 - p2).distance;
       double lineToPointLen = min(containerWidth / 2, containerHeight + 5);
       double angle = _getAngle(p1, p2);
-      MaterialColor pipeColor = edge.flow != 0 ? Colors.green : Colors.grey;
+      Color pipeColor =
+          isSelect ? globals.AdditionalColors.planBorderElement : Colors.grey;
       final containerPoints = [
         Offset(p1.dx + ((containerHeight / 2) * sin(angle + (pi / 2))),
             p1.dy + ((containerHeight / 2) * cos(angle + (pi / 2)))),
@@ -141,12 +139,28 @@ class PipelineWidget extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(2),
-                      color: isSelect
-                          ? globals.AdditionalColors.planBorderElement
-                          : Colors.grey,
+                      color: pipeColor,
                     ),
                     height: containerHeight,
                     width: containerWidth - lineToPointLen,
+                    child: OverflowBox(
+                      maxWidth: 25,
+                      maxHeight: 25,
+                      minWidth: 25,
+                      minHeight: 25,
+                      child: SizedBox(
+                        height: 25,
+                        width: 25,
+                        child: RotatedBox(
+                          quarterTurns: 1,
+                          child: PipelineImageWidget(
+                            backgroundColor: pipeColor,
+                            edgeType: edge.type,
+                            borderColor: Colors.blueAccent,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -166,233 +180,49 @@ class PipelineWidget extends StatelessWidget {
   }
 }
 
-class PipelineSegmentWidget extends StatelessWidget {
-  final Edge edge;
-  final bool isSelect;
+class PipelineImageWidget extends StatelessWidget {
+  final EdgeType edgeType;
+  final Color backgroundColor;
+  final Color borderColor;
 
-  const PipelineSegmentWidget(
-      {required this.edge, super.key, required this.isSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return PipelineWidget.edge(
-      edge: edge,
-      isSelect: isSelect,
-      child: null,
-    );
-  }
-}
-
-class PipelineNodeWidget extends StatelessWidget {
-  final Node node;
-  final bool isSelect;
-
-  const PipelineNodeWidget(
-      {super.key, required this.node, required this.isSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    // TODO: implement build
-    throw UnimplementedError();
-  }
-}
-
-class PipelineValveWidget extends StatelessWidget {
-  final Edge edge;
-  final bool isSelect;
-  const PipelineValveWidget(
-      {required this.edge, super.key, required this.isSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return PipelineWidget.edge(
-      edge: edge,
-      isSelect: isSelect,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 15.0),
-          child:
-              SizedBox(width: 30, child: Image.asset("assets/valve_image.png")),
-        ),
-      ),
-    );
-  }
-}
-
-class PipelinePercentageValveWidget extends StatelessWidget {
-  final Edge edge;
-  final bool isSelect;
-
-  const PipelinePercentageValveWidget(
-      {required this.edge, super.key, required this.isSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return PipelineWidget.edge(
-        edge: edge,
-        isSelect: isSelect,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 15.0),
-            child: SizedBox(
-                width: 30,
-                child: Image.asset("assets/percentage_valve_image.png")),
-          ),
-        ));
-  }
-}
-
-class PipelineFilterWidget extends StatelessWidget {
-  final Edge edge;
-  final bool isSelect;
-
-  const PipelineFilterWidget(
-      {required this.edge, super.key, required this.isSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return PipelineWidget.edge(
-        edge: edge,
-        isSelect: isSelect,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 15.0),
-            child: SizedBox(
-                width: 30, child: Image.asset("assets/filter_image.png")),
-          ),
-        ));
-  }
-}
-
-class PipelineHeaterWidget extends StatelessWidget {
-  final Edge edge;
-  final bool isSelect;
-
-  const PipelineHeaterWidget(
-      {required this.edge, super.key, required this.isSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return PipelineWidget.edge(
-        edge: edge,
-        isSelect: isSelect,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 15.0),
-            child: SizedBox(
-                width: 30, child: Image.asset("assets/heater_image.png")),
-          ),
-        ));
-  }
-}
-
-class PipelineReducerWidget extends StatelessWidget {
-  final Edge edge;
-  final bool isSelect;
-
-  const PipelineReducerWidget(
-      {required this.edge, super.key, required this.isSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return PipelineWidget.edge(
-        edge: edge,
-        isSelect: isSelect,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 15.0),
-            child: SizedBox(
-                width: 30, child: Image.asset("assets/reducer_image.png")),
-          ),
-        ));
-  }
-}
-
-class PipelineMeterWidget extends StatelessWidget {
-  final Edge edge;
-  final bool isSelect;
-
-  const PipelineMeterWidget(
-      {required this.edge, super.key, required this.isSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return PipelineWidget.edge(
-        edge: edge,
-        isSelect: isSelect,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 15.0),
-            child: SizedBox(
-                width: 30, child: Image.asset("assets/meter_image.png")),
-          ),
-        ));
-  }
-}
-
-class PipelineAdorizerWidget extends StatelessWidget {
-  final Edge edge;
-  final bool isSelect;
-
-  const PipelineAdorizerWidget(
-      {required this.edge, super.key, required this.isSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return PipelineWidget.edge(
-        edge: edge,
-        isSelect: isSelect,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 15.0),
-            child: SizedBox(
-                width: 30, child: Image.asset("assets/adorizer_image.png")),
-          ),
-        ));
-  }
-}
-
-class LineWithGestureDetector extends StatelessWidget {
-  final Offset p1;
-  final Offset p2;
-  final double tolerance;
-  final VoidCallback onTap;
-  final bool isSelect;
-  final void Function(DragUpdateDetails dragUpdateDetails) onPanUpdate;
-  const LineWithGestureDetector(
+  const PipelineImageWidget(
       {super.key,
-      required this.p1,
-      required this.p2,
-      required this.tolerance,
-      required this.onTap,
-      required this.onPanUpdate,
-      required this.isSelect}); // Максимальное расстояние от линии для срабатывания
-
-  bool isPointOnLine(Offset point, Offset p1, Offset p2, double tolerance) {
-    double distance = (point.dx - p1.dx) * (p2.dy - p1.dy) -
-        (point.dy - p1.dy) * (p2.dx - p1.dx);
-    distance =
-        distance.abs() / sqrt(pow(p2.dy - p1.dy, 2) + pow(p2.dx - p1.dx, 2));
-    return distance <= tolerance;
-  }
+      required this.edgeType,
+      required this.backgroundColor,
+      required this.borderColor});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-        onTapDown: (details) {
-          Offset touchPosition = details.localPosition;
-          if (isPointOnLine(touchPosition, p1, p2, tolerance)) {
-            onTap();
-          }
-        },
-        onPanUpdate: onPanUpdate,
-        child: CustomPaint(
-            size: const Size(
-                double.infinity, double.infinity), // Adjust the size as needed
-            painter: _MyLinePainter(
-              p1,
-              p2,
-              Colors.blue.withOpacity(isSelect ? 0.8 : 0.3),
-            )));
+    final String? asset = switch (edgeType) {
+      EdgeType.segment => null,
+      EdgeType.valve => "assets/valve_image.png",
+      EdgeType.percentageValve => "assets/percentage_valve_image.png",
+      EdgeType.heater => "assets/heater_image.png",
+      EdgeType.adorizer => "assets/adorizer_image.png",
+      EdgeType.meter => "assets/meter_image.png",
+      EdgeType.reducer => "assets/reducer_image.png",
+      EdgeType.filter => "assets/filter_image.png",
+    };
+    return asset != null
+        ? Container(
+            decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(2),
+                border: Border.all(
+                  width: 1,
+                  color: borderColor,
+                )),
+            width: 25,
+            height: 25,
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: Image.asset(
+                asset,
+                height: 20,
+                width: 20,
+                fit: BoxFit.fill,
+              ),
+            ))
+        : const SizedBox.shrink();
   }
 }

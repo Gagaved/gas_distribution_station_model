@@ -38,7 +38,12 @@ class _SelectedElementPanelState extends State<SelectedElementPanel> {
             },
             child: Card(
                 child: switch (selectedElement) {
-              Edge() => const _EdgeEditingFields(),
+              Edge() => const Column(
+                  children: [
+                    _EdgeEditingFields(),
+                    _EdgeInformationFields(),
+                  ],
+                ),
               Node() => const _NodeEditingFields(),
             }),
           ));
@@ -54,13 +59,15 @@ class _NodeEditingFields extends StatefulObserverWidget {
 }
 
 class _NodeEditingFieldsState extends State<_NodeEditingFields> {
-  final TextEditingController _nodeTypeController = TextEditingController();
+  final TextEditingController _sinkFlowController = TextEditingController();
   final TextEditingController _pressureController = TextEditingController();
   final nodeTypeFocusNode = FocusNode(debugLabel: "nodeTypeFocusNode");
   @override
   Widget build(BuildContext context) {
     final stateStore = EditorState.of(context);
     final Node selectedElement = stateStore.singleSelectedElement as Node;
+    _pressureController.text = selectedElement.pressure.toString();
+    _sinkFlowController.text = selectedElement.sinkFlow.toString();
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: (Column(
@@ -133,6 +140,32 @@ class _NodeEditingFieldsState extends State<_NodeEditingFields> {
                 ),
               ),
             ),
+          if (selectedElement.type == NodeType.sink)
+            SizedBox(
+              width: 150,
+              child: TextField(
+                controller: _sinkFlowController,
+                keyboardType: TextInputType.number,
+                onSubmitted: (value) {
+                  try {
+                    final formatedString =
+                        value.replaceAllMapped(',', (f) => '.');
+                    selectedElement.sinkFlow = double.parse(formatedString);
+                    print(
+                        'set target sink flow to ${selectedElement.sinkFlow}');
+                    _sinkFlowController.text = formatedString;
+                  } catch (e) {
+                    selectedElement.sinkFlow = 0;
+                    _sinkFlowController.value =
+                        const TextEditingValue(text: '0');
+                  }
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Расход, М^3/c',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
         ],
       )),
     );
@@ -151,7 +184,10 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
       FocusNode(debugLabel: '_edgeTypeFocusNode');
   final FocusNode _edgeLenFocusNode =
       FocusNode(debugLabel: '_edgeLenFocusNode');
-  final TextEditingController _pressureController = TextEditingController();
+  final FocusNode _edgeDiamFocusNode =
+      FocusNode(debugLabel: '_edgeLenFocusNode');
+  final TextEditingController _lenController = TextEditingController();
+  final TextEditingController _diamController = TextEditingController();
   @override
   void initState() {
     _edgeTypeFocusNode.addListener(() {
@@ -164,6 +200,8 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
   Widget build(BuildContext context) {
     final stateStore = EditorState.of(context);
     final Edge selectedElement = stateStore.singleSelectedElement as Edge;
+    _lenController.text = selectedElement.length.toString();
+    _diamController.text = selectedElement.diameter.toString();
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: (Column(
@@ -207,39 +245,69 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
             },
           ),
           const SizedBox(height: 10),
-          if (selectedElement.type == EdgeType.segment)
-            SizedBox(
-              width: 150,
-              child: Builder(builder: (context) {
-                void save() {
-                  try {
-                    final value = _pressureController.text;
-                    final formatedString =
-                        value.replaceAllMapped(',', (f) => '.');
-                    selectedElement.length = double.parse(formatedString);
-                    print('set len to ${selectedElement.length}');
-                    _pressureController.text = formatedString;
-                    _edgeLenFocusNode.parent?.requestFocus();
-                  } catch (e) {
-                    selectedElement.length = 0;
-                    _pressureController.value =
-                        const TextEditingValue(text: '0');
-                  }
+          SizedBox(
+            width: 150,
+            child: Builder(builder: (context) {
+              void save() {
+                try {
+                  final value = _lenController.text;
+                  final formatedString =
+                      value.replaceAllMapped(',', (f) => '.');
+                  selectedElement.length = double.parse(formatedString);
+                  print('set len to ${selectedElement.length}');
+                  _lenController.text = formatedString;
+                  _edgeLenFocusNode.parent?.requestFocus();
+                } catch (e) {
+                  selectedElement.length = 0;
+                  _lenController.value = const TextEditingValue(text: '0');
                 }
+              }
 
-                return TextField(
-                  focusNode: _edgeLenFocusNode,
-                  controller: _pressureController,
-                  keyboardType: TextInputType.number,
-                  onTapOutside: (_) => save(),
-                  onEditingComplete: () => save(),
-                  decoration: const InputDecoration(
-                    labelText: 'Длина, м',
-                    border: OutlineInputBorder(),
-                  ),
-                );
-              }),
-            ),
+              return TextField(
+                focusNode: _edgeLenFocusNode,
+                controller: _lenController,
+                keyboardType: TextInputType.number,
+                onTapOutside: (_) => save(),
+                onEditingComplete: () => save(),
+                decoration: const InputDecoration(
+                  labelText: 'Длина, м',
+                  border: OutlineInputBorder(),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: 150,
+            child: Builder(builder: (context) {
+              void save() {
+                try {
+                  final value = _diamController.text;
+                  final formatedString =
+                      value.replaceAllMapped(',', (f) => '.');
+                  selectedElement.diameter = double.parse(formatedString);
+                  print('set diam to ${selectedElement.diameter}');
+                  _diamController.text = formatedString;
+                  _edgeDiamFocusNode.parent?.requestFocus();
+                } catch (e) {
+                  selectedElement.diameter = 0;
+                  _diamController.value = const TextEditingValue(text: '0');
+                }
+              }
+
+              return TextField(
+                focusNode: _edgeDiamFocusNode,
+                controller: _diamController,
+                keyboardType: TextInputType.number,
+                onTapOutside: (_) => save(),
+                onEditingComplete: () => save(),
+                decoration: const InputDecoration(
+                  labelText: 'Диаметр, м',
+                  border: OutlineInputBorder(),
+                ),
+              );
+            }),
+          ),
           if (selectedElement.type == EdgeType.percentageValve)
             Row(
               children: [
@@ -276,6 +344,29 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
             })
         ],
       )),
+    );
+  }
+}
+
+class _EdgeInformationFields extends StatelessObserverWidget {
+  const _EdgeInformationFields({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final stateStore = EditorState.of(context);
+    final Edge selectedElement = stateStore.singleSelectedElement as Edge;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10),
+      child: Column(
+        children: [
+          Text(
+            'ID: ${selectedElement.id}',
+            style: TextStyle(fontSize: 8),
+          ),
+          Text('Поток: ${selectedElement.flow}'),
+          const Text('Температура: ${'10'}'),
+        ],
+      ),
     );
   }
 }

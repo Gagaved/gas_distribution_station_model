@@ -26,6 +26,7 @@ dependencies:
   provider: ^6.1.2
   defer_pointer: ^0.0.2
   transparent_pointer: ^1.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

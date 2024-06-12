@@ -12,6 +12,7 @@ import 'package:transparent_pointer/transparent_pointer.dart';
 
 import '../../models/gas_network.dart';
 import '../grapth_visualisator/grapth_visualisator.dart';
+import 'tools/calculation_tool.dart';
 import 'tools/mouse_region_mobx.dart';
 import 'tools/on_cursor_tool_painter_mobx.dart';
 import 'tools/selected_element_panel.dart';
@@ -185,82 +186,46 @@ class _PipelinePlanWidgetState extends State<_PipelinePlanWidget> {
     {
       for (Edge edge in stateStore.edges) {
         bool isSelect = stateStore.selectedElementIds.lookup(edge.id) != null;
-        switch (edge.type) {
-          case EdgeType.valve:
-            listOfElements
-                .add(PipelineValveWidget(edge: edge, isSelect: isSelect));
-            break;
-          case EdgeType.segment:
-            listOfElements
-                .add(PipelineSegmentWidget(edge: edge, isSelect: isSelect));
-            break;
-          case EdgeType.percentageValve:
-            listOfElements.add(
-                PipelinePercentageValveWidget(edge: edge, isSelect: isSelect));
-            break;
-          case EdgeType.heater:
-            listOfElements
-                .add(PipelineHeaterWidget(edge: edge, isSelect: isSelect));
-            break;
-          case EdgeType.reducer:
-            listOfElements
-                .add(PipelineReducerWidget(edge: edge, isSelect: isSelect));
-            break;
-          case EdgeType.meter:
-            listOfElements
-                .add(PipelineMeterWidget(edge: edge, isSelect: isSelect));
-            break;
-          case EdgeType.filter:
-            listOfElements
-                .add(PipelineFilterWidget(edge: edge, isSelect: isSelect));
-            break;
-          case EdgeType.adorizer:
-            listOfElements
-                .add(PipelineAdorizerWidget(edge: edge, isSelect: isSelect));
-            break;
-          default:
-            listOfElements
-                .add(PipelineSegmentWidget(edge: edge, isSelect: isSelect));
-            break;
+        listOfElements.add(PipelineWidget.edge(edge: edge, isSelect: isSelect));
+        for (Node node in stateStore.nodes) {
+          bool isSelect = stateStore.selectedElementIds.lookup(node.id) != null;
+          listOfElements.add(PipelineWidget.node(
+            node: node,
+            isSelect: isSelect,
+          ));
         }
       }
-      for (Node node in stateStore.nodes) {
-        bool isSelect = stateStore.selectedElementIds.lookup(node.id) != null;
-        listOfElements.add(PipelineWidget.node(
-          node: node,
-          isSelect: isSelect,
-        ));
-      }
-    }
-    listOfElements.add(const EdgeDraftProjector());
+      listOfElements.add(const EdgeDraftProjector());
 
-    return Expanded(
-        child: GestureDetector(
-      onTapDown: (TapDownDetails details) {
-        if (stateStore.selectedTool != null) {
-          stateStore.createElement(
-            transformationController.toScene(details.localPosition),
-          );
-        }
-      },
-      onSecondaryTapDown: (TapDownDetails details) {
-        stateStore.deselectElements();
-      },
-      child: MouserRegionProvider(
-        transformationController: transformationController,
-        child: OnCursorSelectedToolPainter(
-          child: Stack(
-            children: [
-              InfiniteSurface(
-                transformationController: transformationController,
-                children: listOfElements,
-              ),
-              const SelectedElementPanel(),
-            ],
+      return Expanded(
+          child: GestureDetector(
+        onTapDown: (TapDownDetails details) {
+          if (stateStore.selectedTool != null) {
+            stateStore.createElement(
+              transformationController.toScene(details.localPosition),
+            );
+          }
+        },
+        onSecondaryTapDown: (TapDownDetails details) {
+          stateStore.deselectElements();
+        },
+        child: MouserRegionProvider(
+          transformationController: transformationController,
+          child: OnCursorSelectedToolPainter(
+            child: Stack(
+              children: [
+                InfiniteSurface(
+                  transformationController: transformationController,
+                  children: listOfElements,
+                ),
+                const SelectedElementPanel(),
+                const CalculationTool(),
+              ],
+            ),
           ),
         ),
-      ),
-    ));
+      ));
+    }
   }
 }
 

@@ -13,19 +13,43 @@ abstract class EditorState with Store {
       context.read<EditorStateStore>();
 
   void init() {
-    edges = _graph.edges;
-    nodes = _graph.nodes;
+    var nodes = [
+      Node(
+          type: NodeType.source,
+          pressure: 1000000.0,
+          position:
+              const Offset(50, 100)), // P0, источник с постоянным давлением
+      Node(position: const Offset(150, 100)), // P1
+      Node(position: const Offset(250, 100)), // P2
+      Node(position: const Offset(350, 100)), // P3
+      Node(
+          type: NodeType.sink,
+          pressure: 0,
+          position: const Offset(450, 100)) // P4, сток с максимальным расходом
+    ];
+
+    // Определяем рёбра (трубопроводы)
+    var edges = [
+      Edge(nodes[0].id, nodes[1].id, 0.1, 100, 0.0001), // Q01
+      Edge(nodes[1].id, nodes[2].id, 0.1, 100, 0.0001), // Q12
+      Edge(nodes[1].id, nodes[3].id, 0.1, 100, 0.0001), // Q13
+      Edge(nodes[2].id, nodes[3].id, 0.1, 100, 0.0001), // Q23
+      Edge(nodes[3].id, nodes[4].id, 0.1, 100, 0.0001), // Q34
+    ];
+    _graph = GasNetwork(edges: edges, nodes: nodes);
+    this.edges = _graph.edges;
+    this.nodes = _graph.nodes;
   }
 
   // Задаем параметры газа
   @observable
-  double viscosity = 0.0000181; // Вязкость газа в Па·с
+  double viscosity = 0.000011; // Вязкость газа в Па·с
 
   @observable
-  double density = 1.225; // Плотность газа в кг/м³
+  double density = 0.8; // Плотность газа в кг/м³
 
   @observable
-  double epsilon = 1e-6; // Допустимая погрешность
+  double epsilon = 1e-8; // Допустимая погрешность
 
   @observable
   Map<Offset, List<Node>> magneticGrid = {};
@@ -33,7 +57,7 @@ abstract class EditorState with Store {
   @observable
   CalculateStatus calculateStatus = CalculateStatus.complete;
 
-  final GasNetwork _graph = GasNetwork(edges: [], nodes: []);
+  late final GasNetwork _graph;
   @observable
   late List<Edge> edges;
   @observable
@@ -79,7 +103,7 @@ abstract class EditorState with Store {
   }
 
   @action
-  Future<void> calculateFlow() async {
+  Future<void> calculateGasNetwork() async {
     calculateStatus = CalculateStatus.process;
     await _graph.calculateGasNetwork(epsilon, viscosity, density);
     calculateStatus = CalculateStatus.complete;
@@ -163,7 +187,8 @@ abstract class EditorState with Store {
       case ToolType.edge:
         if (_lastCreatedNodeIdForEdgeTool != null) {
           final newNode = _graph.addNode(localPosition);
-          _graph.link(_lastCreatedNodeIdForEdgeTool!, newNode.id, 10, 10, 1);
+          _graph.link(
+              _lastCreatedNodeIdForEdgeTool!, newNode.id, 0.2, 5, 0.0001);
           _lastCreatedNodeIdForEdgeTool = newNode.id;
         } else {
           lastCreatedNodeForEdgeTool = _graph.addNode(localPosition);

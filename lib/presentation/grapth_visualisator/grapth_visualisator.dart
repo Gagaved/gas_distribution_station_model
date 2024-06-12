@@ -34,13 +34,14 @@ class InfiniteSurface extends StatefulWidget {
 
 class InfiniteSurfaceState extends State<InfiniteSurface> {
   Offset _currentOffset = Offset.zero;
-
+  final kDrag = 1e-200;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
         child: DeferredPointerHandler(
           child: InteractiveViewer(
+            interactionEndFrictionCoefficient: kDrag,
             scaleFactor: 400,
             transformationController: widget.transformationController,
             boundaryMargin: const EdgeInsets.all(double.infinity),
@@ -51,7 +52,7 @@ class InfiniteSurfaceState extends State<InfiniteSurface> {
                 _currentOffset += details.focalPointDelta;
               });
             },
-            interactionEndFrictionCoefficient: 100000,
+            //interactionEndFrictionCoefficient: 100,
             child: Stack(
               clipBehavior: Clip.none,
               children: [

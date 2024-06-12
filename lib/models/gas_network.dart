@@ -39,7 +39,7 @@ class Edge extends GraphElement with EdgeMappable {
   /// Расход газа через ребро, вычисляется в процессе расчета
   double flow = 0.0;
 
-  ///Процент открытия крана на этом участке,
+  /// Процент открытия крана на этом участке,
   /// влияет только если EdgeType.valve или EdgeType.percentageValve
   /// 0 <= percentageValve <= 1
   double _percentageValve = 0;
@@ -74,22 +74,28 @@ enum NodeType {
 
 @MappableClass()
 class Node extends GraphElement with NodeMappable {
-  ///Тип участка трубы
+  /// Тип участка трубы
   NodeType type;
 
-  ///Давление в точке, задается вручную для NodeType.source,
+  /// Давление в точке, задается вручную для NodeType.source,
   /// для остальных случаев расчитывается алгоримом
+  /// В паскалях
   double pressure;
 
   ///
+  /// Постоянный максимальный объемный расход газа точкой, только для NodeType.sink,
+  /// В реальном мире отображает потребление газа на конце расчиваемой схемы. м^3/c
+  double sinkFlow;
+
   /// Позиция точки в графе
   Offset position;
 
   Node({
     this.type = NodeType.base,
     required this.position,
-    this.pressure = 0,
-  }); // Давление по умолчанию - 0 Паскалей;
+    this.pressure = 0, //атмосферное давление
+    this.sinkFlow = 0,
+  });
 }
 
 @MappableClass()
@@ -109,18 +115,35 @@ final class GasNetwork with GasNetworkMappable {
 
   GasNetwork({required this.nodes, required this.edges});
 
-  double calculateFrictionFactor(
-      double diameter, double roughness, double velocity, double viscosity) {
+  double calculateFrictionFactor({
+    required double diameter,
+    required double roughness,
+    required double velocity,
+    required double viscosity,
+    double frictionFactor = 0.02, // Initial guess for friction factor
+  }) {
+    // Reynolds number: Re = (velocity * diameter) / viscosity
     double reynoldsNumber = (velocity * diameter) / viscosity;
-    double frictionFactor = 0.02; // Initial guess for friction factor
 
-    for (int i = 0; i < 10; i++) {
-      frictionFactor = 1.0 /
-          pow(
-              -2.0 *
-                  log(roughness / (3.7 * diameter) +
-                      2.51 / (reynoldsNumber * sqrt(frictionFactor))),
-              2);
+    // Iteratively solve Colebrook-White equation
+    if (reynoldsNumber > 4000) {
+      for (int i = 0; i < 10; i++) {
+        frictionFactor = 1.0 /
+            pow(
+                -2.0 *
+                    log((roughness / (14.8 * (diameter / 4))) +
+                        (2.51 / (reynoldsNumber * sqrt(frictionFactor)))),
+                2);
+      }
+    } else {
+      for (int i = 0; i < 10; i++) {
+        frictionFactor = 1.0 /
+            pow(
+                -2.0 *
+                    log((roughness / (3.7 * diameter)) +
+                        (2.51 / (reynoldsNumber * sqrt(frictionFactor)))),
+                2);
+      }
     }
 
     return frictionFactor;
@@ -128,8 +151,11 @@ final class GasNetwork with GasNetworkMappable {
 
   double calculateConductance(double diameter, double length, double roughness,
       double velocity, double viscosity, double density) {
-    double frictionFactor =
-        calculateFrictionFactor(diameter, roughness, velocity, viscosity);
+    double frictionFactor = calculateFrictionFactor(
+        diameter: diameter,
+        roughness: roughness,
+        velocity: velocity,
+        viscosity: viscosity);
     double area = pi * pow(diameter, 2) / 4.0;
     double conductance =
         area * sqrt(2.0 / (frictionFactor * (length / diameter) * density));
@@ -192,7 +218,44 @@ final class GasNetwork with GasNetworkMappable {
             (nodes.firstWhere((n) => n.id == edge.startNodeId).pressure -
                 nodes.firstWhere((n) => n.id == edge.endNodeId).pressure);
       }
+// Проверка и коррекция расхода к точкам стока
+      const correctionCoefficient = 0.25;
+      for (var node in nodes) {
+        if (node.type == NodeType.sink) {
+          double maxFlow = node.sinkFlow;
+          double totalFlowToSink = 0.0;
+          for (var edge in edges.where((e) => e.endNodeId == node.id)) {
+            totalFlowToSink += edge.flow;
+          }
+          if (totalFlowToSink > maxFlow) {
+            // Определяем избыточный поток
+            double excessFlow = totalFlowToSink - maxFlow;
 
+            // Распределение избыточного потока между соседними узлами
+            for (var edge in edges.where((e) => e.endNodeId == node.id)) {
+              // Вычисляем долю избыточного потока для текущего ребра
+              double fraction = (edge.flow / totalFlowToSink) * excessFlow;
+
+              // Находим соседний узел для текущего ребра
+              Node neighborNode =
+                  nodes.firstWhere((n) => n.id == edge.startNodeId);
+
+              // Увеличиваем давление в соседнем узле, но не более, чем в точке стока
+              double maxPressureIncrease =
+                  min(fraction, node.pressure - neighborNode.pressure);
+              neighborNode.pressure += maxPressureIncrease;
+
+              // Уменьшаем избыточный поток на величину, которая ушла в соседний узел
+              excessFlow -= maxPressureIncrease;
+            }
+            // Увеличиваем давление в точке стока пропорционально оставшемуся избыточному потоку
+            node.pressure += excessFlow * correctionCoefficient;
+            hasConverged =
+                false; // Повторяем итерацию, так как изменили давление
+          }
+        }
+      }
+      updateConductances(viscosity, density);
       iteration++;
       print('Iteration $iteration:');
       for (var node in nodes) {
@@ -280,43 +343,4 @@ final class GasNetwork with GasNetworkMappable {
   bool removeNode(Node graphElement) {
     return (canRemoveNode(graphElement)) ? nodes.remove(graphElement) : false;
   }
-}
-
-void main() {
-  // Определяем узлы
-  var nodes = [
-    Node(
-        type: NodeType.source,
-        pressure: 50.0,
-        position: const Offset(0, 0)), // P0, источник с постоянным давлением
-    Node(position: const Offset(1, 0)), // P1
-    Node(position: const Offset(2, 0)), // P2
-    Node(position: const Offset(3, 0)), // P3
-    Node(
-        type: NodeType.sink,
-        position: const Offset(4, 0)) // P4, сток с максимальным расходом
-  ];
-
-  // Определяем рёбра (трубопроводы)
-  var edges = [
-    Edge(nodes[0].id, nodes[1].id, 0.1, 100, 0.0001), // Q01
-    Edge(nodes[1].id, nodes[2].id, 0.1, 100, 0.0001), // Q12
-    Edge(nodes[1].id, nodes[3].id, 0.1, 100, 0.0001), // Q13
-    Edge(nodes[2].id, nodes[3].id, 0.1, 100, 0.0001), // Q23
-    Edge(nodes[3].id, nodes[4].id, 0.1, 100, 0.0001), // Q34
-  ];
-
-  // Задаем параметры газа
-  double viscosity = 0.0000181; // Вязкость газа в Па·с
-  double density = 1.225; // Плотность газа в кг/м³
-  double epsilon = 1e-6; // Допустимая погрешность
-
-  // Создаем сеть
-  var network = GasNetwork.fromPointsAndEdges(nodes, edges);
-
-  // Обновляем кондуктивности рёбер
-  network.updateConductances(viscosity, density);
-
-  // Рассчитываем давления и расходы
-  network.calculateFlowsAndPressures(epsilon, viscosity, density);
 }
