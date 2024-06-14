@@ -119,6 +119,26 @@ class PipelineWidget extends StatelessWidget {
           containerPoints.map((offset) => offset.dx).reduce(min);
       final height = containerPoints.map((offset) => offset.dy).reduce(max) -
           containerPoints.map((offset) => offset.dy).reduce(min);
+      final Color statusColor = switch (edge.type) {
+        // TODO: Handle this case.
+        EdgeType.segment => edge.flow != 0 ? Colors.greenAccent : pipeColor,
+        // TODO: Handle this case.
+        EdgeType.valve =>
+          edge.percentageValve != 0 ? Colors.greenAccent : pipeColor,
+        // TODO: Handle this case.
+        EdgeType.percentageValve =>
+          edge.percentageValve != 0 ? Colors.greenAccent : pipeColor,
+        // TODO: Handle this case.
+        EdgeType.heater => edge.flow != 0 ? Colors.greenAccent : pipeColor,
+        // TODO: Handle this case.
+        EdgeType.adorizer => edge.flow != 0 ? Colors.greenAccent : pipeColor,
+        // TODO: Handle this case.
+        EdgeType.meter => edge.flow != 0 ? Colors.greenAccent : pipeColor,
+        // TODO: Handle this case.
+        EdgeType.reducer => edge.flow != 0 ? Colors.greenAccent : pipeColor,
+        // TODO: Handle this case.
+        EdgeType.filter => edge.flow != 0 ? Colors.greenAccent : pipeColor,
+      };
       return Positioned(
         top: top,
         left: left,

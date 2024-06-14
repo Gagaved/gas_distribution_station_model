@@ -17,7 +17,7 @@ dependencies:
   floor: any
   faker: any
   tuple: ^2.0.1
-  file_picker: ^5.3.2
+  file_picker: ^8.0.5
   dart_mappable: ^4.2.2
   equatable: ^2.0.5
   uuid: ^3.0.7
@@ -42,7 +42,6 @@ msix_config:
   languages: en-us
 flutter:
   assets:
-    - assets/appainter_theme.json
     - assets/valve_image.png
     - assets/percentage_valve_image.png
     - assets/meter_image.png

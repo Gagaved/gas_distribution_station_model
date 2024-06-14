@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gas_distribution_station_model/data/util/FileManager.dart';
+import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
 import 'package:mobx/mobx.dart';
 
 import '../../models/gas_network.dart';
@@ -16,25 +18,29 @@ abstract class EditorState with Store {
     var nodes = [
       Node(
           type: NodeType.source,
-          pressure: 1000000.0,
+          calculationType: NodeCalculationType.pressure,
+          pressure: 3000000.0,
           position:
               const Offset(50, 100)), // P0, источник с постоянным давлением
       Node(position: const Offset(150, 100)), // P1
       Node(position: const Offset(250, 100)), // P2
-      Node(position: const Offset(350, 100)), // P3
+      Node(position: const Offset(350, 100)), // P2
+      Node(position: const Offset(450, 100)), // P3
       Node(
           type: NodeType.sink,
-          pressure: 0,
-          position: const Offset(450, 100)) // P4, сток с максимальным расходом
+          pressure: 100000,
+          sinkFlow: 1,
+          position: const Offset(550, 100)) // P4, сток с максимальным расходом
     ];
 
     // Определяем рёбра (трубопроводы)
     var edges = [
-      Edge(nodes[0].id, nodes[1].id, 0.1, 100, 0.0001), // Q01
-      Edge(nodes[1].id, nodes[2].id, 0.1, 100, 0.0001), // Q12
-      Edge(nodes[1].id, nodes[3].id, 0.1, 100, 0.0001), // Q13
-      Edge(nodes[2].id, nodes[3].id, 0.1, 100, 0.0001), // Q23
-      Edge(nodes[3].id, nodes[4].id, 0.1, 100, 0.0001), // Q34
+      Edge(nodes[0].id, nodes[1].id, 0.1, 10, 0.0001), // Q01
+      Edge(nodes[1].id, nodes[2].id, 0.1, 10, 0.0001), // Q12
+      Edge(nodes[2].id, nodes[3].id, 0.1, 10, 0.0001,
+          type: EdgeType.segment, reducerTargetPressure: 1000000), // Q12
+      Edge(nodes[3].id, nodes[4].id, 0.1, 10, 0.0001), // Q23
+      Edge(nodes[4].id, nodes[5].id, 0.1, 10, 0.0001), // Q34
     ];
     _graph = GasNetwork(edges: edges, nodes: nodes);
     this.edges = _graph.edges;
@@ -49,7 +55,7 @@ abstract class EditorState with Store {
   double density = 0.8; // Плотность газа в кг/м³
 
   @observable
-  double epsilon = 1e-8; // Допустимая погрешность
+  double epsilon = 1e-6; // Допустимая погрешность
 
   @observable
   Map<Offset, List<Node>> magneticGrid = {};
@@ -57,7 +63,7 @@ abstract class EditorState with Store {
   @observable
   CalculateStatus calculateStatus = CalculateStatus.complete;
 
-  late final GasNetwork _graph;
+  late GasNetwork _graph;
   @observable
   late List<Edge> edges;
   @observable
@@ -107,6 +113,7 @@ abstract class EditorState with Store {
     calculateStatus = CalculateStatus.process;
     await _graph.calculateGasNetwork(epsilon, viscosity, density);
     calculateStatus = CalculateStatus.complete;
+    updateEdgesAndNodesState();
   }
 
   @action
@@ -118,8 +125,17 @@ abstract class EditorState with Store {
       } else {
         selectedElementIds.add(element.id);
       }
-      updateEdgesAndNodesState();
+    } else if (element is Node) {
+      if (_lastCreatedNodeIdForEdgeTool == null) {
+        lastCreatedNodeForEdgeTool = element;
+        _lastCreatedNodeIdForEdgeTool = element.id;
+      } else {
+        _graph.link(_lastCreatedNodeIdForEdgeTool!, element.id, 0.1, 5, 0.0001);
+        _lastCreatedNodeIdForEdgeTool = null;
+        lastCreatedNodeForEdgeTool = null;
+      }
     }
+    updateEdgesAndNodesState();
   }
 
   @action
@@ -201,54 +217,27 @@ abstract class EditorState with Store {
   }
 
   @action
-  void changeThroughputFlowPercentage(Edge element, double value) {
-    // TODO: Implement this method.
-  }
-
-  @action
-  void changeHeaterPower(Edge element, double value) {
-    // TODO: Implement this method.
-  }
-
-  @action
-  void changeSinkTargetFlow(Edge element, double value) {
-    // TODO: Implement this method.
-  }
-
-  @action
-  void changeLen(Edge element, double value) {
-    // TODO: Implement this method.
-  }
-
-  @action
-  void changeDiam(Edge element, double value) {
-    // TODO: Implement this method.
-  }
-
-  @action
-  void changeSourcePressure(Edge element, double value) {
-    // TODO: Implement this method.
-  }
-
-  @action
-  void changeTargetPressure(Edge element, double value) {
-    // TODO: Implement this method.
-  }
-
-  @action
   Future<void> exportToFile() async {
-    // TODO: Implement this method.
+    FileManager.writeGasNetwork(_graph, 'gas_network');
   }
 
   @action
   Future<void> clear() async {
-    // TODO: Implement this method.
+    _graph = GasNetwork(nodes: [], edges: []);
+    selectedElementIds.clear();
+    updateEdgesAndNodesState();
   }
 
   @action
   Future<void> loadFromFile() async {
-    // TODO: Implement this method.
+    final graph = await FileManager.getGraphFromFile();
+    if (graph != null) {
+      _graph = graph;
+      selectedElementIds.clear();
+      updateEdgesAndNodesState();
+    }
   }
+
   bool isMagneticSurfaceEnable = true;
   double magneticStep = 5;
   double magneticRadius = 3;
@@ -273,7 +262,7 @@ abstract class EditorState with Store {
   Edge _addNewEdge(double diam) {
     var p1 = _graph.addNode(const Offset(300, 300));
     var p2 = _graph.addNode(const Offset(300, 400));
-    final newEdge = _graph.link(p1.id, p2.id, diam, 100, 0.0001);
+    final newEdge = _graph.link(p1.id, p2.id, diam, 5, 0.0001);
     updateEdgesAndNodesState();
     return newEdge;
   }
@@ -299,8 +288,12 @@ abstract class EditorState with Store {
 }
 
 enum ToolType {
-  edge,
-  node,
+  edge('Участок'),
+  node('Узел');
+
+  const ToolType(this.value);
+
+  final String value;
 }
 
 enum CalculateStatus {

@@ -18,7 +18,6 @@ import 'tools/on_cursor_tool_painter_mobx.dart';
 import 'tools/selected_element_panel.dart';
 
 part 'pipeline_element.dart';
-part 'pipeline_information_card.dart';
 //import 'package:gas_distribution_station_model/presentation/editor_page/clear_confirmation_popup.dart';
 //import 'package:gas_distribution_station_model/presentation/editor_page/pipeline_element.dart';
 part 'tools/clear_confirmation_popup.dart';
@@ -96,7 +95,7 @@ class _EditorToolsWidget extends StatelessWidget {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(3.0),
-                  child: ElevatedButton(
+                  child: MaterialButton(
                     onPressed: () {
                       EditorState.of(context).exportToFile();
                     },
@@ -113,7 +112,7 @@ class _EditorToolsWidget extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.all(3.0),
-                  child: ElevatedButton(
+                  child: MaterialButton(
                     onPressed: () {
                       EditorState.of(context).loadFromFile();
                     },
@@ -130,7 +129,7 @@ class _EditorToolsWidget extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.all(3.0),
-                  child: ElevatedButton(
+                  child: MaterialButton(
                     onPressed: () async {
                       bool? wasDelete = await showDialog<bool>(
                           context: context,
@@ -187,16 +186,29 @@ class _PipelinePlanWidgetState extends State<_PipelinePlanWidget> {
       for (Edge edge in stateStore.edges) {
         bool isSelect = stateStore.selectedElementIds.lookup(edge.id) != null;
         listOfElements.add(PipelineWidget.edge(edge: edge, isSelect: isSelect));
-        for (Node node in stateStore.nodes) {
-          bool isSelect = stateStore.selectedElementIds.lookup(node.id) != null;
-          listOfElements.add(PipelineWidget.node(
-            node: node,
-            isSelect: isSelect,
-          ));
-        }
+      }
+      for (Node node in stateStore.nodes) {
+        bool isSelect = stateStore.selectedElementIds.lookup(node.id) != null;
+        listOfElements.add(PipelineWidget.node(
+          node: node,
+          isSelect: isSelect,
+        ));
       }
       listOfElements.add(const EdgeDraftProjector());
 
+      // listOfElements.insert(
+      //   0,
+      //   Positioned(
+      //     height: 1600,
+      //     width: 2400,
+      //     child: FittedBox(
+      //       fit: BoxFit.fill,
+      //       child: Image.asset(
+      //         'assets/GRS.png',
+      //       ),
+      //     ),
+      //   ),
+      // );
       return Expanded(
           child: GestureDetector(
         onTapDown: (TapDownDetails details) {
@@ -239,49 +251,42 @@ class _PipelinePanelWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final stateStore = EditorState.of(context);
     const toolTypes = ToolType.values;
-    return Column(
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Scrollbar(
-          controller: _scrollController,
-          child: SizedBox(
-            height: 60,
-            child: ListView.builder(
-              controller: _scrollController,
-              itemCount: toolTypes.length,
-              scrollDirection: Axis.horizontal,
-              itemBuilder: (BuildContext con, int index) {
-                return GestureDetector(onTap: () {
-                  EditorState.of(context)
-                      .changeSelectedToolType(toolTypes[index]);
-                }, child: Observer(builder: (context) {
-                  return Container(
-                    padding: const EdgeInsets.all(5.0),
-                    child: Card(
-                      elevation: 5,
-                      color: stateStore.selectedTool == toolTypes[index]
-                          ? Theme.of(context).primaryColor
-                          : null,
-                      child: Padding(
-                        padding: const EdgeInsets.all(3.0),
-                        child: Center(
-                          child: Text(
-                            toolTypes[index].name,
-                            style: TextStyle(
-                              color: stateStore.selectedTool == toolTypes[index]
-                                  ? Theme.of(context).colorScheme.onPrimary
-                                  : Theme.of(context).colorScheme.primary,
-                            ),
+        ...toolTypes.map(
+          (tool) {
+            return Expanded(
+              child: GestureDetector(onTap: () {
+                EditorState.of(context).changeSelectedToolType(tool);
+              }, child: Observer(builder: (context) {
+                return Container(
+                  padding: const EdgeInsets.all(5.0),
+                  height: 60,
+                  child: Card(
+                    elevation: 5,
+                    color: stateStore.selectedTool == tool
+                        ? Theme.of(context).primaryColor
+                        : null,
+                    child: Padding(
+                      padding: const EdgeInsets.all(3.0),
+                      child: Center(
+                        child: Text(
+                          tool.value,
+                          style: TextStyle(
+                            color: stateStore.selectedTool == tool
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
                     ),
-                  );
-                }));
-              },
-            ),
-          ),
-        ),
+                  ),
+                );
+              })),
+            );
+          },
+        )
       ],
     );
   }
