@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
 import 'package:gas_distribution_station_model/presentation/design/app_card.dart';
@@ -352,14 +353,14 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
   @override
   Widget build(BuildContext context) {
     final stateStore = EditorState.of(context);
-    final Edge selectedElement = stateStore.singleSelectedElement as Edge;
-    _lenController.text = selectedElement.length.toString();
-    _diamController.text = selectedElement.diameter.toString();
-    _roughnessController.text = selectedElement.roughness.toString();
+    final Edge edge = stateStore.singleSelectedElement as Edge;
+    _lenController.text = edge.length.toString();
+    _diamController.text = edge.diameter.toString();
+    _roughnessController.text = edge.roughness.toString();
     _reducerController.text =
-        (selectedElement.reducerTargetPressure * 1e-6).toStringAsFixed(2);
+        (edge.reducerTargetPressure * 1e-6).toStringAsFixed(2);
     _valvePowConductanceCoefficientController.text =
-        selectedElement.valvePowConductanceCoefficient.toStringAsFixed(2);
+        edge.valvePowConductanceCoefficient.toStringAsFixed(2);
     return (Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -368,20 +369,30 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
           children: [
-            MaterialButton(
-              onPressed: () {
-                stateStore.deleteElement(selectedElement);
-              },
-              color: Colors.red,
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Удалить'),
-                  Icon(
-                    Icons.delete,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                    onPressed: () {
+                      stateStore.rotateEdge(edge);
+                    },
+                    icon: const Icon(Icons.rotate_left)),
+                MaterialButton(
+                  onPressed: () {
+                    stateStore.deleteElement(edge);
+                  },
+                  color: Colors.red,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Удалить'),
+                      Icon(
+                        Icons.delete,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             const Text(
@@ -392,7 +403,7 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                   color: Colors.black54),
             ),
             DropdownButton<EdgeType>(
-              value: selectedElement.type,
+              value: edge.type,
               items: EdgeType.values
                   .map<DropdownMenuItem<EdgeType>>((EdgeType type) {
                 return DropdownMenuItem<EdgeType>(
@@ -405,7 +416,7 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
               onChanged: (EdgeType? type) {
                 setState(() {
                   if (type != null) {
-                    selectedElement.type = type;
+                    edge.type = type;
                     stateStore.updateEdgesAndNodesState();
                   }
                 });
@@ -428,12 +439,12 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                       final value = _lenController.text;
                       final formatedString =
                           value.replaceAllMapped(',', (f) => '.');
-                      selectedElement.length = double.parse(formatedString);
-                      print('set len to ${selectedElement.length}');
+                      edge.length = double.parse(formatedString);
+                      print('set len to ${edge.length}');
                       _lenController.text = formatedString;
                       _edgeLenFocusNode.parent?.requestFocus();
                     } catch (e) {
-                      selectedElement.length = 0;
+                      edge.length = 0;
                       _lenController.value = const TextEditingValue(text: '0');
                     }
                   }
@@ -460,12 +471,12 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                       final value = _diamController.text;
                       final formatedString =
                           value.replaceAllMapped(',', (f) => '.');
-                      selectedElement.diameter = double.parse(formatedString);
-                      print('set diam to ${selectedElement.diameter}');
+                      edge.diameter = double.parse(formatedString);
+                      print('set diam to ${edge.diameter}');
                       _diamController.text = formatedString;
                       _edgeDiamFocusNode.parent?.requestFocus();
                     } catch (e) {
-                      selectedElement.diameter = 0;
+                      edge.diameter = 0;
                       _diamController.value = const TextEditingValue(text: '0');
                     }
                   }
@@ -493,13 +504,12 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                         final value = _diamController.text;
                         final formatedString =
                             value.replaceAllMapped(',', (f) => '.');
-                        selectedElement.roughness =
-                            double.parse(formatedString);
-                        print('set roughness to ${selectedElement.roughness}');
+                        edge.roughness = double.parse(formatedString);
+                        print('set roughness to ${edge.roughness}');
                         _roughnessController.text = formatedString;
                         _roughnessFocusNode.parent?.requestFocus();
                       } catch (e) {
-                        selectedElement.roughness = 0.0001;
+                        edge.roughness = 0.0001;
                         _roughnessController.value =
                             const TextEditingValue(text: '0');
                       }
@@ -522,7 +532,7 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
             ],
           ),
         ),
-        if (selectedElement.type == EdgeType.reducer)
+        if (edge.type == EdgeType.reducer)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 5.0),
             child: AppCard(
@@ -534,14 +544,13 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                     final value = _reducerController.text;
                     final formatedString =
                         value.replaceAllMapped(',', (f) => '.');
-                    selectedElement.reducerTargetPressure =
+                    edge.reducerTargetPressure =
                         double.parse(formatedString) * 1e6;
-                    print(
-                        'set reduser value to ${selectedElement.reducerTargetPressure}');
+                    print('set reduser value to ${edge.reducerTargetPressure}');
                     _reducerController.text = formatedString;
                     _reducerFocusNode.parent?.requestFocus();
                   } catch (e) {
-                    selectedElement.reducerTargetPressure = 0;
+                    edge.reducerTargetPressure = 0;
                     _reducerController.value =
                         const TextEditingValue(text: '0');
                   }
@@ -561,7 +570,7 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
               }),
             ),
           ),
-        if (selectedElement.type == EdgeType.percentageValve)
+        if (edge.type == EdgeType.percentageValve)
           Padding(
             padding: const EdgeInsets.only(top: 5.0),
             child: AppCard(
@@ -574,15 +583,15 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Slider(
-                      value: selectedElement.percentageValve,
+                      value: edge.percentageValve,
                       onChanged: (value) {
                         setState(() {
-                          selectedElement.percentageValve = value;
+                          edge.percentageValve = value;
                           stateStore.updateEdgesAndNodesState();
                         });
                       }),
                   Text(
-                      'Процент открытия: ${(selectedElement.percentageValve * 100).toStringAsFixed(0)}%'),
+                      'Процент открытия: ${(edge.percentageValve * 100).toStringAsFixed(0)}%'),
                   const SizedBox(height: 10),
                   const Text(
                     'Коэф степенной функции сопротивления крана',
@@ -596,16 +605,16 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                             _valvePowConductanceCoefficientController.text;
                         final formatedString =
                             value.replaceAllMapped(',', (f) => '.');
-                        selectedElement.valvePowConductanceCoefficient =
+                        edge.valvePowConductanceCoefficient =
                             double.parse(formatedString);
                         print(
-                            'set valvePowConductanceCoefficient value to ${selectedElement.valvePowConductanceCoefficient}');
+                            'set valvePowConductanceCoefficient value to ${edge.valvePowConductanceCoefficient}');
                         _valvePowConductanceCoefficientController.text =
                             formatedString;
                         _valvePowConductanceCoefficientNode.parent
                             ?.requestFocus();
                       } catch (e) {
-                        selectedElement.valvePowConductanceCoefficient = 2;
+                        edge.valvePowConductanceCoefficient = 2;
                         _valvePowConductanceCoefficientController.value =
                             const TextEditingValue(text: '0');
                       }
@@ -627,7 +636,7 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
               ),
             ),
           ),
-        if (selectedElement.type == EdgeType.valve)
+        if (edge.type == EdgeType.valve)
           Padding(
             padding: const EdgeInsets.only(top: 5.0),
             child: AppCard(
@@ -637,13 +646,13 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                 style: TextStyle(fontSize: 12),
               ),
               child: Builder(builder: (context) {
-                bool isOpen = selectedElement.percentageValve != 0;
+                bool isOpen = edge.percentageValve != 0;
                 return MaterialButton(
                     onPressed: () {
                       setState(() {
                         isOpen
-                            ? selectedElement.percentageValve = 0
-                            : selectedElement.percentageValve = 1;
+                            ? edge.percentageValve = 0
+                            : edge.percentageValve = 1;
                         stateStore.updateEdgesAndNodesState();
                       });
                     },
@@ -672,6 +681,15 @@ class _EdgeInformationFields extends StatelessObserverWidget {
           Text(
               'Поток: ${selectedElement.flowPerHour.toStringAsFixed(1)} М^3/ч'),
           const Text('Температура: ${'10'}'),
+          GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: selectedElement.id))
+                    .then((_) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("id copied to clipboard")));
+                });
+              },
+              child: Text('id: ${selectedElement.id}')),
         ],
       ),
     );
@@ -690,6 +708,7 @@ class _NodeInformationFields extends StatelessObserverWidget {
         child: Column(
           children: [
             Text('Давление Па: ${node.pressure}'),
+            Text('id: ${node.id}'),
           ],
         ));
   }

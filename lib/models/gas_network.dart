@@ -16,72 +16,90 @@ final class GasNetwork with GasNetworkMappable {
 
   (List<Node>, List<Edge>) calculateFlowsAndPressures(
       double epsilon, double viscosity, double density) {
-    bool hasConverged;
-    int iteration = 0;
+    bool innerConverged;
+    bool globalConverged;
+    int globalIteration = 0;
+    int innerIteration = 0;
     _updateConductances(viscosity, density);
     do {
-      hasConverged = true;
-      for (var node in nodes) {
-        if (node.type != NodeType.base) {
-          continue;
-        }
-
-        var incomingEdges =
-            edges.where((edge) => edge.endNodeId == node.id).toList();
-        var outgoingEdges =
-            edges.where((edge) => edge.startNodeId == node.id).toList();
-
-        double prevPressure = node.pressure;
-
-        double numerator = 0.0;
-        double denominator = 0.0;
-
-        for (var edge in incomingEdges) {
-          numerator += edge.conductance *
-              nodes.firstWhere((n) => n.id == edge.startNodeId).pressure;
-          denominator += edge.conductance;
-        }
-        for (var edge in outgoingEdges) {
-          numerator += edge.conductance *
-              nodes.firstWhere((n) => n.id == edge.endNodeId).pressure;
-          denominator += edge.conductance;
-        }
-
-        if (denominator > 0) {
-          node.pressure = numerator / denominator;
-        }
-
-        if ((node.pressure - prevPressure).abs() > epsilon) {
-          hasConverged = false;
-        }
-      }
-
-      for (var edge in edges) {
-        edge.flow = edge.conductance *
-            (nodes.firstWhere((n) => n.id == edge.startNodeId).pressure -
-                nodes.firstWhere((n) => n.id == edge.endNodeId).pressure);
-      }
-
-      // Обновляем давление в точке стока
+      globalConverged = true;
+      var oldPressures =
+          globalIteration != 0 ? [...nodes.map((e) => e._pressure)] : null;
       for (var node in nodes) {
         if (node.calculationType == NodeCalculationType.flow) {
-          adjustPressureNodePressure(node);
+          node.pressure = 101000;
         }
       }
+      do {
+        innerConverged = true;
+        for (var node in nodes) {
+          if (node.type != NodeType.base) {
+            continue;
+          }
 
-      _updateConductances(viscosity, density);
-      iteration++;
-      print('Iteration $iteration:');
-      for (var node in nodes) {
-        print(
-            'P${node.id} ${node.calculationType == NodeType.sink ? 'SINK' : ''} = ${node.pressure}');
-      }
-      for (var edge in edges) {
-        print('Q${edge.startNodeId}${edge.endNodeId} = ${edge.flow}');
-      }
-    } while (!hasConverged && iteration < 10000);
+          var incomingEdges =
+              edges.where((edge) => edge.endNodeId == node.id).toList();
+          var outgoingEdges =
+              edges.where((edge) => edge.startNodeId == node.id).toList();
 
-    print('Converged after $iteration iterations.');
+          double prevPressure = node.pressure;
+
+          double numerator = 0.0;
+          double denominator = 0.0;
+
+          for (var edge in incomingEdges) {
+            numerator += edge.conductance *
+                nodes.firstWhere((n) => n.id == edge.startNodeId).pressure;
+            denominator += edge.conductance;
+          }
+          for (var edge in outgoingEdges) {
+            numerator += edge.conductance *
+                nodes.firstWhere((n) => n.id == edge.endNodeId).pressure;
+            denominator += edge.conductance;
+          }
+
+          if (denominator > 0) {
+            node.pressure = numerator / denominator;
+          }
+
+          if ((node.pressure - prevPressure).abs() > epsilon) {
+            innerConverged = false;
+          }
+        }
+
+        for (var edge in edges) {
+          final firstNode = nodes.firstWhere((n) => n.id == edge.startNodeId);
+          final secondNode = nodes.firstWhere((n) => n.id == edge.endNodeId);
+          edge.flow =
+              edge.conductance * (firstNode.pressure - secondNode.pressure);
+        }
+
+        // Обновляем давление в точке стока
+        for (var node in nodes) {
+          if (node.calculationType == NodeCalculationType.flow) {
+            adjustPressureNodePressure(node);
+          }
+        }
+
+        _updateConductances(viscosity, density);
+        innerIteration++;
+      } while (!innerConverged);
+      print('inner converged after innerIteration $innerIteration iterations.');
+      _updateReducersConductances();
+      if (oldPressures != null) {
+        for (final e in oldPressures.indexed) {
+          if ((nodes[e.$1].pressure - e.$2).abs() > epsilon) {
+            globalConverged = false;
+          }
+        }
+      } else {
+        globalConverged = false;
+      }
+      globalIteration++;
+    } while (!globalConverged && globalIteration < 1000);
+
+    print('Converged after global $globalIteration iterations.');
+
     for (var node in nodes) {
       print(
           'Final ${node.calculationType == NodeType.sink ? 'SINK' : ''} P${node.id} = ${node.pressure}');
@@ -94,33 +112,56 @@ final class GasNetwork with GasNetworkMappable {
 
   void adjustPressureNodePressure(Node node) {
     // Проверяем, что переданная точка является точкой стока
-    if (node.calculationType != NodeCalculationType.pressure) {
+    if (node.calculationType != NodeCalculationType.flow) {
       throw ArgumentError('The provided node is not a sink node.');
     }
 
-    // Находим все входящие ребра для этой точки стока
-    var incomingEdges =
-        edges.where((edge) => edge.endNodeId == node.id).toList();
+    // Находим все входящие и исходящие ребра для этой точки
+    var connectedEdges = edges
+        .where(
+            (edge) => edge.startNodeId == node.id || edge.endNodeId == node.id)
+        .toList();
 
-    // Вычисляем сумму входящих потоков
-    double totalIncomingFlow =
-        incomingEdges.fold(0.0, (sum, edge) => sum + edge.flow);
+    // Вычисляем суммы входящих и исходящих потоков
+    double totalIncomingFlow = 0.0;
+    double totalOutgoingFlow = 0.0;
+    double totalFlow = 0.0;
+
+    for (var edge in connectedEdges) {
+      if (edge.endNodeId == node.id) {
+        totalIncomingFlow += edge.flow;
+      } else if (edge.startNodeId == node.id) {
+        totalOutgoingFlow += edge.flow;
+      }
+      totalFlow += edge.flow;
+    }
 
     // Вычисляем коэффициент недостающего потока
-    double missingFlowCoefficient = 1 - (node.sinkFlow / totalIncomingFlow);
+    double missingFlowCoefficient = 1 - (node.sinkFlow / totalFlow);
 
     // Вычисляем дополнительное давление
     double additionalPressure = 0.0;
-    for (var edge in incomingEdges) {
+    for (var edge in connectedEdges) {
       var startNode = nodes.firstWhere((n) => n.id == edge.startNodeId);
-      double pressureDifference = startNode.pressure - node.pressure;
-      double edgeFlowContribution = edge.flow / totalIncomingFlow;
+      var endNode = nodes.firstWhere((n) => n.id == edge.endNodeId);
+
+      double pressureDifference;
+      if (edge.endNodeId == node.id) {
+        pressureDifference = startNode.pressure - node.pressure;
+      } else if (edge.startNodeId == node.id) {
+        pressureDifference = node.pressure - endNode.pressure;
+      } else {
+        continue;
+      }
+
+      double edgeFlowContribution = edge.flow / totalFlow;
       additionalPressure += edgeFlowContribution * pressureDifference;
     }
 
     // Умножаем дополнительное давление на коэффициент недостающего потока
     additionalPressure *= missingFlowCoefficient;
-    print('additionalPressure $additionalPressure');
+    //print('additionalPressure $additionalPressure');
+
     // Увеличиваем давление в точке
     node.pressure += additionalPressure;
   }
@@ -139,11 +180,16 @@ final class GasNetwork with GasNetworkMappable {
 
   void _clear() {
     for (var edge in edges) {
+      edge._reducerConductanceCoefficient = 1;
       edge.flow = 0;
       edge._conductance = 0.0;
     }
     for (var node in nodes) {
-      if (node.type == NodeType.base) node.pressure = 101000;
+      if (node.type == NodeType.base ||
+          node.type == NodeType.sink &&
+              node.calculationType == NodeCalculationType.flow) {
+        node.pressure = 101000;
+      }
     }
   }
 
@@ -181,7 +227,11 @@ final class GasNetwork with GasNetworkMappable {
     return frictionFactor;
   }
 
-  double calculateConductance(double diameter, double length, double roughness,
+  void removeLoopEdges() {
+    edges.removeWhere((edge) => edge.startNodeId == edge.endNodeId);
+  }
+
+  double _calculateConductance(double diameter, double length, double roughness,
       double velocity, double viscosity, double density) {
     double frictionFactor = calculateFrictionFactor(
         diameter: diameter,
@@ -194,33 +244,58 @@ final class GasNetwork with GasNetworkMappable {
     return conductance;
   }
 
+  void _updateReducersConductances() {
+    const double adjustmentFactor =
+        0.1; // Фактор шага для регулировки коэффициента
+    const double minAdjustment = 1e-6; // Минимальная величина корректировки
+
+    for (var reducer in edges.where((e) => e.type == EdgeType.reducer)) {
+      final startNode =
+          nodes.firstWhere((node) => node.id == reducer.startNodeId);
+      final endNode = nodes.firstWhere((node) => node.id == reducer.endNodeId);
+
+      if (startNode.pressure > endNode.pressure) {
+        // Вычисляем целевой коэффициент проводимости редуктора
+        final targetConductanceCoefficient =
+            reducer.reducerConductanceCoefficient *
+                1 /
+                (endNode.pressure / reducer.reducerTargetPressure);
+
+        // Вычисляем разницу между текущим и целевым коэффициентом проводимости
+        print(
+            "cal:${targetConductanceCoefficient - reducer.reducerConductanceCoefficient}");
+        final conductanceDifference = targetConductanceCoefficient -
+            reducer.reducerConductanceCoefficient;
+
+        // Плавная корректировка текущего коэффициента с учетом разницы
+        reducer.reducerConductanceCoefficient +=
+            adjustmentFactor * conductanceDifference;
+
+        // Ограничиваем минимальную величину корректировки
+        if (reducer.reducerConductanceCoefficient.abs() < minAdjustment) {
+          reducer.reducerConductanceCoefficient = minAdjustment;
+        }
+
+        print(
+            'Updated reducerConductanceCoefficient: ${reducer.reducerConductanceCoefficient}');
+      }
+    }
+  }
+
   void _updateConductances(double viscosity, double density) {
     for (var edge in edges) {
       double velocity = max(1, edge.flow / (pi * pow(edge.diameter, 2) / 4));
-      double baseConductance = calculateConductance(edge.diameter, edge.length,
+      double baseConductance = _calculateConductance(edge.diameter, edge.length,
           edge.roughness, velocity, viscosity, density);
 
       if (edge.type == EdgeType.valve ||
           edge.type == EdgeType.percentageValve) {
         edge._conductance = baseConductance *
             pow(edge.percentageValve, edge.valvePowConductanceCoefficient);
-        print('ce to ${edge._conductance}');
+        print('_conductance to ${edge._conductance}');
       } else if (edge.type == EdgeType.reducer) {
-        Node startNode = nodes.firstWhere((n) => n.id == edge.startNodeId);
-        Node endNode = nodes.firstWhere((n) => n.id == edge.endNodeId);
-
-        double pressureDifference =
-            endNode.pressure - edge.reducerTargetPressure;
-        double conductanceCoefficient = (pressureDifference > 0)
-            ? 1.0
-            : pow(1 + (pressureDifference.abs() / edge.reducerTargetPressure),
-                    2)
-                .toDouble();
-        edge._conductance = baseConductance * conductanceCoefficient;
-        print(
-            'baseConductance $baseConductance * reducerConductanceCoefficient $conductanceCoefficient = \n'
-            '${edge._conductance}');
-        edge._conductance = baseConductance;
+        edge._conductance =
+            baseConductance * pow(edge._reducerConductanceCoefficient, 2);
       } else {
         edge._conductance = baseConductance;
       }
@@ -297,6 +372,12 @@ final class GasNetwork with GasNetworkMappable {
   bool removeNode(Node graphElement) {
     return (canRemoveNode(graphElement)) ? nodes.remove(graphElement) : false;
   }
+
+  void rotateEdge(Edge edge) {
+    final String endNodeId = edge.endNodeId;
+    edge.endNodeId = edge.startNodeId;
+    edge.startNodeId = endNodeId;
+  }
 }
 
 @MappableClass()
@@ -334,13 +415,17 @@ class Edge extends GraphElement with EdgeMappable {
   /// Процент открытия крана на этом участке,
   /// влияет только если EdgeType.valve или EdgeType.percentageValve
   /// 0 <= percentageValve <= 1
-  double _percentageValve = 0;
-
+  double _percentageValve;
   double get percentageValve => _percentageValve;
-  double valvePowConductanceCoefficient = 2;
-  double reducerTargetPressure = 0;
-  double get reducerConductance => _reducerConductance;
-  double _reducerConductance = 0.0;
+  double valvePowConductanceCoefficient;
+  double reducerTargetPressure;
+  double _reducerConductanceCoefficient = 1.0;
+
+  double get reducerConductanceCoefficient => _reducerConductanceCoefficient;
+
+  set reducerConductanceCoefficient(double value) {
+    _reducerConductanceCoefficient = max(min(1, value), 0);
+  }
 
   ///только для нагревателя
   bool heaterOn = false;
@@ -360,7 +445,10 @@ class Edge extends GraphElement with EdgeMappable {
     super.id,
     this.type = EdgeType.segment,
     this.reducerTargetPressure = 0,
-  }) : _conductance = 0.0;
+    this.valvePowConductanceCoefficient = 2,
+    double? percentageValve,
+  })  : _conductance = 0.0,
+        _percentageValve = percentageValve ?? 0;
 }
 
 @MappableEnum()
@@ -406,7 +494,19 @@ class Node extends GraphElement with NodeMappable {
   /// Давление в точке, задается вручную для NodeType.source,
   /// для остальных случаев расчитывается алгоримом
   /// В паскалях
-  double pressure;
+  double _pressure;
+
+  /// Давление в точке, задается вручную для NodeType.source,
+  /// для остальных случаев расчитывается алгоримом
+  /// В паскалях
+  double get pressure => _pressure;
+
+  /// Давление в точке, задается вручную для NodeType.source,
+  /// для остальных случаев расчитывается алгоримом
+  /// В паскалях
+  set pressure(double value) {
+    _pressure = max(value, 0.0);
+  }
 
   ///
   /// Постоянный максимальный объемный расход газа точкой, только для NodeType.sink,
@@ -421,9 +521,10 @@ class Node extends GraphElement with NodeMappable {
     NodeType type = NodeType.base,
     this.calculationType = NodeCalculationType.pressure,
     required this.position,
-    this.pressure = 0, //атмосферное давление
+    double pressure = 0, //атмосферное давление
     this.sinkFlow = 0,
-  }) : _type = type;
+  })  : _pressure = pressure,
+        _type = type;
 }
 
 class OffsetMapper extends SimpleMapper<Offset> {

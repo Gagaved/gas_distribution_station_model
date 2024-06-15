@@ -101,8 +101,9 @@ class PipelineWidget extends StatelessWidget {
       double containerWidth = (p1 - p2).distance;
       double lineToPointLen = min(containerWidth / 2, containerHeight + 5);
       double angle = _getAngle(p1, p2);
-      Color pipeColor =
-          isSelect ? globals.AdditionalColors.planBorderElement : Colors.grey;
+      Color pipeColor = isSelect
+          ? globals.AdditionalColors.planBorderElement
+          : globals.AdditionalColors.lightGray;
       final containerPoints = [
         Offset(p1.dx + ((containerHeight / 2) * sin(angle + (pi / 2))),
             p1.dy + ((containerHeight / 2) * cos(angle + (pi / 2)))),
@@ -120,23 +121,15 @@ class PipelineWidget extends StatelessWidget {
       final height = containerPoints.map((offset) => offset.dy).reduce(max) -
           containerPoints.map((offset) => offset.dy).reduce(min);
       final Color statusColor = switch (edge.type) {
-        // TODO: Handle this case.
         EdgeType.segment => edge.flow != 0 ? Colors.greenAccent : pipeColor,
-        // TODO: Handle this case.
         EdgeType.valve =>
-          edge.percentageValve != 0 ? Colors.greenAccent : pipeColor,
-        // TODO: Handle this case.
+          edge.percentageValve != 0 ? Colors.greenAccent : Colors.redAccent,
         EdgeType.percentageValve =>
-          edge.percentageValve != 0 ? Colors.greenAccent : pipeColor,
-        // TODO: Handle this case.
+          edge.percentageValve != 0 ? Colors.greenAccent : Colors.redAccent,
         EdgeType.heater => edge.flow != 0 ? Colors.greenAccent : pipeColor,
-        // TODO: Handle this case.
         EdgeType.adorizer => edge.flow != 0 ? Colors.greenAccent : pipeColor,
-        // TODO: Handle this case.
         EdgeType.meter => edge.flow != 0 ? Colors.greenAccent : pipeColor,
-        // TODO: Handle this case.
         EdgeType.reducer => edge.flow != 0 ? Colors.greenAccent : pipeColor,
-        // TODO: Handle this case.
         EdgeType.filter => edge.flow != 0 ? Colors.greenAccent : pipeColor,
       };
       return Positioned(
@@ -160,25 +153,50 @@ class PipelineWidget extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(2),
                       color: pipeColor,
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          spreadRadius: 1,
+                          blurRadius: 1,
+                          offset: Offset(0, 0.5), // changes position of shadow
+                        ),
+                      ],
                     ),
                     height: containerHeight,
                     width: containerWidth - lineToPointLen,
                     child: OverflowBox(
                       maxWidth: 25,
-                      maxHeight: 25,
+                      maxHeight: 30,
                       minWidth: 25,
                       minHeight: 25,
-                      child: SizedBox(
-                        height: 25,
-                        width: 25,
-                        child: RotatedBox(
-                          quarterTurns: 1,
-                          child: PipelineImageWidget(
-                            backgroundColor: pipeColor,
-                            edgeType: edge.type,
-                            borderColor: Colors.blueAccent,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        alignment: Alignment.center,
+                        clipBehavior: Clip.none,
+                        children: [
+                          Center(
+                            child: SizedBox(
+                              height: 25,
+                              width: 25,
+                              child: RotatedBox(
+                                quarterTurns: 1,
+                                child: PipelineImageWidget(
+                                  backgroundColor: statusColor,
+                                  edgeType: edge.type,
+                                  borderColor: Colors.blueAccent,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                          if (edge.type.isDirectional)
+                            const Positioned(
+                              bottom: -5,
+                              child: Icon(
+                                Icons.keyboard_backspace,
+                                size: 7,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),

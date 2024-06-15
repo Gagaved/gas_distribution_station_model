@@ -28,19 +28,46 @@ abstract class EditorState with Store {
       Node(position: const Offset(450, 100)), // P3
       Node(
           type: NodeType.sink,
+          calculationType: NodeCalculationType.flow,
           pressure: 100000,
-          sinkFlow: 1,
+          sinkFlow: 2,
           position: const Offset(550, 100)) // P4, сток с максимальным расходом
     ];
 
     // Определяем рёбра (трубопроводы)
     var edges = [
-      Edge(nodes[0].id, nodes[1].id, 0.1, 10, 0.0001), // Q01
-      Edge(nodes[1].id, nodes[2].id, 0.1, 10, 0.0001), // Q12
-      Edge(nodes[2].id, nodes[3].id, 0.1, 10, 0.0001,
-          type: EdgeType.segment, reducerTargetPressure: 1000000), // Q12
-      Edge(nodes[3].id, nodes[4].id, 0.1, 10, 0.0001), // Q23
-      Edge(nodes[4].id, nodes[5].id, 0.1, 10, 0.0001), // Q34
+      Edge(
+          startNodeId: nodes[0].id,
+          endNodeId: nodes[1].id,
+          diameter: 0.1,
+          length: 10,
+          roughness: 0.0001), // Q01
+      Edge(
+          startNodeId: nodes[1].id,
+          endNodeId: nodes[2].id,
+          diameter: 0.1,
+          length: 10,
+          roughness: 0.0001), // Q12
+      Edge(
+          startNodeId: nodes[2].id,
+          endNodeId: nodes[3].id,
+          diameter: 0.1,
+          length: 10,
+          roughness: 0.0001,
+          type: EdgeType.reducer,
+          reducerTargetPressure: 1000000), // Q12
+      Edge(
+          startNodeId: nodes[3].id,
+          endNodeId: nodes[4].id,
+          diameter: 0.1,
+          length: 10,
+          roughness: 0.0001), // Q23
+      Edge(
+          startNodeId: nodes[4].id,
+          endNodeId: nodes[5].id,
+          diameter: 0.1,
+          length: 10,
+          roughness: 0.0001), // Q34
     ];
     _graph = GasNetwork(edges: edges, nodes: nodes);
     this.edges = _graph.edges;
@@ -111,8 +138,11 @@ abstract class EditorState with Store {
   @action
   Future<void> calculateGasNetwork() async {
     calculateStatus = CalculateStatus.process;
-    await _graph.calculateGasNetwork(epsilon, viscosity, density);
-    calculateStatus = CalculateStatus.complete;
+    try {
+      await _graph.calculateGasNetwork(epsilon, viscosity, density);
+    } finally {
+      calculateStatus = CalculateStatus.complete;
+    }
     updateEdgesAndNodesState();
   }
 
@@ -233,6 +263,7 @@ abstract class EditorState with Store {
     final graph = await FileManager.getGraphFromFile();
     if (graph != null) {
       _graph = graph;
+      _graph.removeLoopEdges();
       selectedElementIds.clear();
       updateEdgesAndNodesState();
     }
@@ -285,6 +316,11 @@ abstract class EditorState with Store {
   }
 
   nodeById(String id) => _graph.nodeById(id);
+
+  void rotateEdge(Edge edge) {
+    _graph.rotateEdge(edge);
+    updateEdgesAndNodesState();
+  }
 }
 
 enum ToolType {

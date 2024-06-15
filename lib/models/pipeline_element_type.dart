@@ -15,5 +15,7 @@ enum EdgeType {
 
   const EdgeType(this.value);
 
+  bool get isDirectional => this == EdgeType.reducer || this == meter;
+
   final String value;
 }
