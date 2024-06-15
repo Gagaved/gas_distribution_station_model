@@ -225,6 +225,7 @@ class _PipelinePlanWidgetState extends State<_PipelinePlanWidget> {
           transformationController: transformationController,
           child: OnCursorSelectedToolPainter(
             child: Stack(
+              fit: StackFit.expand,
               children: [
                 InfiniteSurface(
                   transformationController: transformationController,

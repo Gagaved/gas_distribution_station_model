@@ -138,10 +138,15 @@ abstract class EditorState with Store {
   @action
   Future<void> calculateGasNetwork() async {
     calculateStatus = CalculateStatus.process;
+    final start = DateTime.now();
     try {
       await _graph.calculateGasNetwork(epsilon, viscosity, density);
+    } on Exception catch (e) {
+      print(e);
     } finally {
       calculateStatus = CalculateStatus.complete;
+      final end = DateTime.now();
+      print(end.difference(start));
     }
     updateEdgesAndNodesState();
   }
