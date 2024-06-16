@@ -339,10 +339,13 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
       FocusNode(debugLabel: '_reducerLenFocusNode');
   final FocusNode _valvePowConductanceCoefficientNode =
       FocusNode(debugLabel: '_reducerLenFocusNode');
+  final FocusNode _heaterPowerNode =
+      FocusNode(debugLabel: '_heaterPowerFocusNode');
   final TextEditingController _lenController = TextEditingController();
   final TextEditingController _diamController = TextEditingController();
   final TextEditingController _roughnessController = TextEditingController();
   final TextEditingController _reducerController = TextEditingController();
+  final TextEditingController _heaterPowerController = TextEditingController();
   final TextEditingController _valvePowConductanceCoefficientController =
       TextEditingController();
   @override
@@ -361,6 +364,7 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
         (edge.reducerTargetPressure * 1e-6).toStringAsFixed(2);
     _valvePowConductanceCoefficientController.text =
         edge.valvePowConductanceCoefficient.toStringAsFixed(2);
+    _heaterPowerController.text = edge.heaterPower.toStringAsFixed(2);
     return (Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -501,7 +505,7 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                   child: Builder(builder: (context) {
                     void save() {
                       try {
-                        final value = _diamController.text;
+                        final value = _roughnessController.text;
                         final formatedString =
                             value.replaceAllMapped(',', (f) => '.');
                         edge.roughness = double.parse(formatedString);
@@ -509,7 +513,7 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                         _roughnessController.text = formatedString;
                         _roughnessFocusNode.parent?.requestFocus();
                       } catch (e) {
-                        edge.roughness = 0.0001;
+                        //edge.roughness = 0.0001;
                         _roughnessController.value =
                             const TextEditingValue(text: '0');
                       }
@@ -660,7 +664,83 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                     child: Text(isOpen ? 'Открыт' : 'Закрыт'));
               }),
             ),
-          )
+          ),
+        if (edge.type == EdgeType.adorizer)
+          Padding(
+            padding: const EdgeInsets.only(top: 5.0),
+            child: AppCard(
+              title: 'Адоризатор',
+              child: Builder(builder: (context) {
+                return MaterialButton(
+                    onPressed: () {
+                      setState(() {
+                        edge.adorizerOn = !edge.adorizerOn;
+                        stateStore.updateEdgesAndNodesState();
+                      });
+                    },
+                    color: edge.adorizerOn ? Colors.green : Colors.red,
+                    child: Text(edge.adorizerOn
+                        ? 'Арозирация вкл'
+                        : 'Адоризация выкл'));
+              }),
+            ),
+          ),
+        if (edge.type == EdgeType.heater)
+          Padding(
+            padding: const EdgeInsets.only(top: 5.0),
+            child: AppCard(
+              title: 'Нагреватель',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10.0),
+                    child: SizedBox(
+                      width: 150,
+                      child: Builder(builder: (context) {
+                        void save() {
+                          try {
+                            final value = _heaterPowerController.text;
+                            final formatedString =
+                                value.replaceAllMapped(',', (f) => '.');
+                            edge.heaterPower = double.parse(formatedString);
+                            print('set heaterPower to ${edge.heaterPower}');
+                            _heaterPowerController.text = formatedString;
+                            _heaterPowerNode.parent?.requestFocus();
+                          } catch (e) {
+                            _heaterPowerController.value =
+                                const TextEditingValue(text: '0');
+                          }
+                        }
+
+                        return TextField(
+                          focusNode: _heaterPowerNode,
+                          controller: _heaterPowerController,
+                          keyboardType: TextInputType.number,
+                          onTapOutside: (_) => save(),
+                          onEditingComplete: () => save(),
+                          decoration: const InputDecoration(
+                            labelText: 'Мощность, Ватт',
+                            border: OutlineInputBorder(),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                  MaterialButton(
+                      onPressed: () {
+                        setState(() {
+                          edge.heaterOn = !edge.heaterOn;
+                          stateStore.updateEdgesAndNodesState();
+                        });
+                      },
+                      color: edge.heaterOn ? Colors.green : Colors.red,
+                      child: Text(edge.heaterOn ? 'Нагрев' : 'Выключен')),
+                ],
+              ),
+            ),
+          ),
       ],
     ));
   }
@@ -672,24 +752,28 @@ class _EdgeInformationFields extends StatelessObserverWidget {
   @override
   Widget build(BuildContext context) {
     final stateStore = EditorState.of(context);
-    final Edge selectedElement = stateStore.singleSelectedElement as Edge;
+    final Edge edge = stateStore.singleSelectedElement as Edge;
     return AppCard(
       title: 'Результаты расчета',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text('Поток: ${edge.flowPerHour.abs().toStringAsFixed(1)} М^3/ч'),
           Text(
-              'Поток: ${selectedElement.flowPerHour.toStringAsFixed(1)} М^3/ч'),
-          const Text('Температура: ${'10'}'),
-          GestureDetector(
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: selectedElement.id))
-                    .then((_) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("id copied to clipboard")));
-                });
-              },
-              child: Text('id: ${selectedElement.id}')),
+              'Температура: ${(edge.temperature - 273.15).toStringAsFixed(1)} °C'),
+          Text(
+            edge.isAdorize ? 'Адоризирован' : 'не адоризирован',
+            style: TextStyle(color: edge.isAdorize ? Colors.green : Colors.red),
+          ),
+          // GestureDetector(
+          //     onTap: () {
+          //       Clipboard.setData(ClipboardData(text: selectedElement.id))
+          //           .then((_) {
+          //         ScaffoldMessenger.of(context).showSnackBar(
+          //             const SnackBar(content: Text("id copied to clipboard")));
+          //       });
+          //     },
+          //     child: Text('id: ${selectedElement.id}')),
         ],
       ),
     );
@@ -708,7 +792,16 @@ class _NodeInformationFields extends StatelessObserverWidget {
         child: Column(
           children: [
             Text('Давление Па: ${node.pressure}'),
-            Text('id: ${node.id}'),
+            Text(
+                'Температура: ${(node.temperature - 273.15).toStringAsFixed(1)} °C'),
+            GestureDetector(
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: node.id)).then((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text("id copied to clipboard")));
+                  });
+                },
+                child: Text('id: ${node.id}')),
           ],
         ));
   }

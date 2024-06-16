@@ -101,9 +101,8 @@ class PipelineWidget extends StatelessWidget {
       double containerWidth = (p1 - p2).distance;
       double lineToPointLen = min(containerWidth / 2, containerHeight + 5);
       double angle = _getAngle(p1, p2);
-      Color pipeColor = isSelect
-          ? globals.AdditionalColors.planBorderElement
-          : globals.AdditionalColors.lightGray;
+      final Color selectColor = globals.AdditionalColors.planBorderElement;
+      Color basePipeColor = globals.AdditionalColors.lightGray;
       final containerPoints = [
         Offset(p1.dx + ((containerHeight / 2) * sin(angle + (pi / 2))),
             p1.dy + ((containerHeight / 2) * cos(angle + (pi / 2)))),
@@ -120,17 +119,23 @@ class PipelineWidget extends StatelessWidget {
           containerPoints.map((offset) => offset.dx).reduce(min);
       final height = containerPoints.map((offset) => offset.dy).reduce(max) -
           containerPoints.map((offset) => offset.dy).reduce(min);
+      final Color pipeColor = (edge.flow.abs() > 0.001 &&
+              stateStore.maxFlow != null &&
+              stateStore.maxFlow != 0)
+          ? Color.lerp(basePipeColor, Colors.blueAccent,
+              edge.flow.abs() / stateStore.maxFlow!)!
+          : basePipeColor;
       final Color statusColor = switch (edge.type) {
-        EdgeType.segment => edge.flow != 0 ? Colors.greenAccent : pipeColor,
+        EdgeType.segment => basePipeColor,
         EdgeType.valve =>
-          edge.percentageValve != 0 ? Colors.greenAccent : Colors.redAccent,
+          edge.percentageValve != 0 ? Colors.green : Colors.redAccent,
         EdgeType.percentageValve =>
-          edge.percentageValve != 0 ? Colors.greenAccent : Colors.redAccent,
-        EdgeType.heater => edge.flow != 0 ? Colors.greenAccent : pipeColor,
-        EdgeType.adorizer => edge.flow != 0 ? Colors.greenAccent : pipeColor,
-        EdgeType.meter => edge.flow != 0 ? Colors.greenAccent : pipeColor,
-        EdgeType.reducer => edge.flow != 0 ? Colors.greenAccent : pipeColor,
-        EdgeType.filter => edge.flow != 0 ? Colors.greenAccent : pipeColor,
+          edge.percentageValve != 0 ? Colors.green : Colors.redAccent,
+        EdgeType.heater => edge.heaterOn ? Colors.green : Colors.redAccent,
+        EdgeType.adorizer => edge.adorizerOn ? Colors.green : Colors.redAccent,
+        EdgeType.meter => edge.flow != 0 ? Colors.green : basePipeColor,
+        EdgeType.reducer => edge.flow != 0 ? Colors.green : basePipeColor,
+        EdgeType.filter => edge.flow != 0 ? Colors.green : basePipeColor,
       };
       return Positioned(
         top: top,
@@ -153,6 +158,10 @@ class PipelineWidget extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(2),
                       color: pipeColor,
+                      border: Border.all(
+                          width: 2,
+                          color: isSelect ? selectColor : Colors.transparent,
+                          strokeAlign: BorderSide.strokeAlignOutside),
                       boxShadow: const [
                         BoxShadow(
                           color: Colors.black26,
@@ -183,7 +192,9 @@ class PipelineWidget extends StatelessWidget {
                                 child: PipelineImageWidget(
                                   backgroundColor: statusColor,
                                   edgeType: edge.type,
-                                  borderColor: Colors.blueAccent,
+                                  borderColor: isSelect
+                                      ? selectColor
+                                      : Colors.transparent,
                                 ),
                               ),
                             ),
@@ -246,6 +257,13 @@ class PipelineImageWidget extends StatelessWidget {
             decoration: BoxDecoration(
                 color: backgroundColor,
                 borderRadius: BorderRadius.circular(2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    spreadRadius: 1,
+                    blurRadius: 1,
+                  ),
+                ],
                 border: Border.all(
                   width: 1,
                   color: borderColor,

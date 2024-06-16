@@ -16,6 +16,8 @@ import 'tools/calculation_tool.dart';
 import 'tools/mouse_region_mobx.dart';
 import 'tools/on_cursor_tool_painter_mobx.dart';
 import 'tools/selected_element_panel.dart';
+import 'tools/side_tools_menu.dart';
+import 'tools/tools_state_mobx.dart';
 
 part 'pipeline_element.dart';
 //import 'package:gas_distribution_station_model/presentation/editor_page/clear_confirmation_popup.dart';
@@ -28,25 +30,33 @@ class EditorPageWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Provider(
-        create: (context) => EditorStateStore()..init(),
-        child: const FocusScope(
-          child: _KeyboardHandler(
-            child: Row(
-              children: [
-                /// Панель иструментов редактора
-                _EditorToolsWidget(),
+      create: (context) => ToolsStateStore(),
+      child: Provider(
+          create: (context) => EditorStateStore()..init(),
+          child: const FocusScope(
+            child: _KeyboardHandler(
+              child: Stack(fit: StackFit.expand, children: [
+                Row(
+                  children: [
+                    /// Панель иструментов редактора
+                    SideToolsMenuWidget(),
 
-                /// Рабочее поле редактора на котором отображается элементы редактора
-                _PipelinePlanWidget(),
-              ],
+                    /// Рабочее поле редактора на котором отображается элементы редактора
+                    _PipelinePlanWidget(),
+                  ],
+                ),
+                SelectedElementPanel(),
+                CalculationTool(),
+              ]),
             ),
-          ),
-        ));
+          )),
+    );
   }
 }
 
 class _KeyboardHandler extends StatefulWidget {
   const _KeyboardHandler({super.key, required this.child});
+
   final Widget child;
 
   @override
@@ -55,6 +65,7 @@ class _KeyboardHandler extends StatefulWidget {
 
 class _KeyboardHandlerState extends State<_KeyboardHandler> {
   final focusNode = FocusNode();
+
   @override
   void dispose() {
     focusNode.dispose();
@@ -78,91 +89,6 @@ class _KeyboardHandlerState extends State<_KeyboardHandler> {
   }
 }
 
-class _EditorToolsWidget extends StatelessWidget {
-  const _EditorToolsWidget();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          width: 200,
-          child: ListView(children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(3.0),
-                  child: MaterialButton(
-                    onPressed: () {
-                      EditorState.of(context).exportToFile();
-                    },
-                    child: const Row(
-                      children: [
-                        Icon(Icons.save),
-                        Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text("Экпорт"),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(3.0),
-                  child: MaterialButton(
-                    onPressed: () {
-                      EditorState.of(context).loadFromFile();
-                    },
-                    child: const Row(
-                      children: [
-                        Icon(Icons.upload_file_sharp),
-                        Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text("Импорт"),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(3.0),
-                  child: MaterialButton(
-                    onPressed: () async {
-                      bool? wasDelete = await showDialog<bool>(
-                          context: context,
-                          builder: (_) {
-                            return const ClearConfirmationPopup();
-                          });
-                      print("was delete:$wasDelete");
-                      if (wasDelete != null && wasDelete) {
-                        EditorState.of(context).clear();
-                        try {} catch (_) {}
-                      }
-                    },
-                    child: const Row(
-                      children: [
-                        Icon(Icons.delete_forever),
-                        Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text("Очистить"),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const _PipelinePanelWidget()
-          ]),
-        ),
-      ],
-    );
-  }
-}
-
 class _PipelinePlanWidget extends StatefulObserverWidget {
   const _PipelinePlanWidget();
 
@@ -173,6 +99,7 @@ class _PipelinePlanWidget extends StatefulObserverWidget {
 class _PipelinePlanWidgetState extends State<_PipelinePlanWidget> {
   final TransformationController transformationController =
       TransformationController();
+
   @override
   void initState() {
     super.initState();
@@ -224,71 +151,13 @@ class _PipelinePlanWidgetState extends State<_PipelinePlanWidget> {
         child: MouserRegionProvider(
           transformationController: transformationController,
           child: OnCursorSelectedToolPainter(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                InfiniteSurface(
-                  transformationController: transformationController,
-                  children: listOfElements,
-                ),
-                const SelectedElementPanel(),
-                const CalculationTool(),
-              ],
+            child: InfiniteSurface(
+              transformationController: transformationController,
+              children: listOfElements,
             ),
           ),
         ),
       ));
     }
-  }
-}
-
-class _PipelinePanelWidget extends StatelessWidget {
-  const _PipelinePanelWidget({Key? key}) : super(key: key);
-  static final TextEditingController _flowFieldController =
-      TextEditingController();
-  static final ScrollController _scrollController = ScrollController();
-
-  @override
-  Widget build(BuildContext context) {
-    final stateStore = EditorState.of(context);
-    const toolTypes = ToolType.values;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ...toolTypes.map(
-          (tool) {
-            return Expanded(
-              child: GestureDetector(onTap: () {
-                EditorState.of(context).changeSelectedToolType(tool);
-              }, child: Observer(builder: (context) {
-                return Container(
-                  padding: const EdgeInsets.all(5.0),
-                  height: 60,
-                  child: Card(
-                    elevation: 5,
-                    color: stateStore.selectedTool == tool
-                        ? Theme.of(context).primaryColor
-                        : null,
-                    child: Padding(
-                      padding: const EdgeInsets.all(3.0),
-                      child: Center(
-                        child: Text(
-                          tool.value,
-                          style: TextStyle(
-                            color: stateStore.selectedTool == tool
-                                ? Theme.of(context).colorScheme.onPrimary
-                                : Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              })),
-            );
-          },
-        )
-      ],
-    );
   }
 }

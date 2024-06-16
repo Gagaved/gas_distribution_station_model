@@ -77,12 +77,19 @@ abstract class EditorState with Store {
   // Задаем параметры газа
   @observable
   double viscosity = 0.000011; // Вязкость газа в Па·с
+  @observable
+  double molarMass = 0.016; //кг/моль
+  @observable
+  double zFactor = 0.9981; //фактор сжимаемости
+  @observable
+  double epsilon = 1e-1; // Допустимая погрешность
+  @observable
+  double universalGasConstant = 8.314; // Дж/(моль·К)
+  @observable
+  double specificHeat = 2483;
 
   @observable
-  double density = 0.8; // Плотность газа в кг/м³
-
-  @observable
-  double epsilon = 1e-6; // Допустимая погрешность
+  double? maxFlow;
 
   @observable
   Map<Offset, List<Node>> magneticGrid = {};
@@ -139,8 +146,19 @@ abstract class EditorState with Store {
   Future<void> calculateGasNetwork() async {
     calculateStatus = CalculateStatus.process;
     final start = DateTime.now();
+    maxFlow = null;
     try {
-      await _graph.calculateGasNetwork(epsilon, viscosity, density);
+      await _graph.calculateGasNetwork(
+        epsilon: epsilon,
+        viscosity: viscosity,
+        zFactor: zFactor,
+        molarMass: molarMass,
+        universalGasConstant: universalGasConstant,
+        specificHeat: specificHeat,
+      );
+      updateEdgesAndNodesState();
+      edges.sort((f, s) => f.flow.abs() < s.flow.abs() ? 1 : 0);
+      maxFlow = edges.firstOrNull?.flow.abs();
     } on Exception catch (e) {
       print(e);
     } finally {
@@ -148,7 +166,6 @@ abstract class EditorState with Store {
       final end = DateTime.now();
       print(end.difference(start));
     }
-    updateEdgesAndNodesState();
   }
 
   @action
@@ -231,6 +248,7 @@ abstract class EditorState with Store {
   String? _lastCreatedNodeIdForEdgeTool;
   @observable
   Node? lastCreatedNodeForEdgeTool;
+
   @action
   void createElement(Offset localPosition) {
     switch (selectedTool) {
