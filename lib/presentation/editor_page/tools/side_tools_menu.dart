@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
 
 import '../editor_page.dart';
 import '../editor_state_mobx.dart';
@@ -99,8 +100,60 @@ class SideToolsMenuWidget extends StatelessWidget {
                 ),
               ),
             ),
+            const _PipelinePanelWidget()
           ]),
         ),
+      ],
+    );
+  }
+}
+
+class _PipelinePanelWidget extends StatelessWidget {
+  const _PipelinePanelWidget({Key? key}) : super(key: key);
+  static final TextEditingController _flowFieldController =
+      TextEditingController();
+  static final ScrollController _scrollController = ScrollController();
+
+  @override
+  Widget build(BuildContext context) {
+    final stateStore = EditorState.of(context);
+    const toolTypes = ToolType.values;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ...toolTypes.map(
+          (tool) {
+            return Expanded(
+              child: GestureDetector(onTap: () {
+                EditorState.of(context).changeSelectedToolType(tool);
+              }, child: Observer(builder: (context) {
+                return Container(
+                  padding: const EdgeInsets.all(5.0),
+                  height: 60,
+                  child: Card(
+                    elevation: 5,
+                    color: stateStore.selectedTool == tool
+                        ? Theme.of(context).primaryColor
+                        : null,
+                    child: Padding(
+                      padding: const EdgeInsets.all(3.0),
+                      child: Center(
+                        child: Text(
+                          tool.value,
+                          style: TextStyle(
+                            color: stateStore.selectedTool == tool
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              })),
+            );
+          },
+        )
       ],
     );
   }
