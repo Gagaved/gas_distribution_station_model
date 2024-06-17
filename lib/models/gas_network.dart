@@ -45,14 +45,13 @@ final class GasNetwork with GasNetworkMappable {
     for (var edge in edges) {
       edge._reducerConductanceCoefficient = 1;
       edge.flow = 0;
+      edge._frictionFactor = null;
       edge._conductance = 0.0;
       edge.temperature = 293.15;
       edge.isAdorize = false;
     }
     for (var node in nodes) {
-      if (node.type == NodeType.base ||
-          node.type == NodeType.sink &&
-              node.calculationType == NodeCalculationType.flow) {
+      if (node.type == NodeType.base || node.type == NodeType.sink) {
         node.pressure = 101000;
         node.temperature = 293.15;
       }
@@ -162,6 +161,8 @@ class Edge extends GraphElement with EdgeMappable {
 
   double _conductance;
 
+  double? _frictionFactor;
+
   /// Коэффициент проводимости для расчета потока газа через ребро
   double get conductance => _conductance;
 
@@ -252,34 +253,10 @@ enum NodeType {
   final String value;
 }
 
-@MappableEnum()
-enum NodeCalculationType {
-  flow('Поток'),
-  pressure('Давление');
-
-  const NodeCalculationType(this.value);
-
-  final String value;
-}
-
 @MappableClass(includeCustomMappers: [OffsetMapper()])
 class Node extends GraphElement with NodeMappable {
   /// Тип узла, только для визуальной части
-  NodeType _type;
-
-  /// Тип узла, только для визуальной части
-  NodeType get type => _type;
-
-  /// Тип узла, только для визуальной части
-  set type(NodeType value) {
-    _type = value;
-    if (value != NodeType.base) {
-      calculationType = calculationType ?? NodeCalculationType.pressure;
-    }
-  }
-
-  ///не null только для type = sink or source
-  NodeCalculationType? calculationType;
+  NodeType type;
 
   /// Давление в точке, задается вручную для NodeType.source,
   /// для остальных случаев расчитывается алгоримом
@@ -295,7 +272,7 @@ class Node extends GraphElement with NodeMappable {
   /// для остальных случаев расчитывается алгоримом
   /// В паскалях
   set pressure(double value) {
-    _pressure = max(value, 0.0);
+    _pressure = max(value, 1);
   }
 
   ///
@@ -309,14 +286,12 @@ class Node extends GraphElement with NodeMappable {
   double temperature;
   Node({
     super.id,
-    NodeType type = NodeType.base,
-    this.calculationType = NodeCalculationType.pressure,
+    this.type = NodeType.base,
     required this.position,
     double pressure = 0, //атмосферное давление
     this.sinkFlow = 0,
     this.temperature = 293.15,
-  })  : _pressure = pressure,
-        _type = type;
+  }) : _pressure = pressure;
 }
 
 class OffsetMapper extends SimpleMapper<Offset> {

@@ -23,5 +23,11 @@ abstract class ToolsState with Store {
 
   @observable
   HeatMapState? heatMapState = HeatMapState.flow;
-  static ToolsState of(BuildContext context) => context.read<ToolsStateStore>();
+
+  static ToolsState of(BuildContext context) => context.get<ToolsStateStore>();
+}
+
+extension ProviderContextExt on BuildContext {
+  T get<T>() => Provider.of<T>(this, listen: false);
+  T watch<T>() => Provider.of<T>(this);
 }

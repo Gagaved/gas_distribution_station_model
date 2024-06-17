@@ -12,27 +12,6 @@ double _getAngle(Offset p1, Offset p2) {
   return result;
 }
 
-class _MyLinePainter extends CustomPainter {
-  final Offset p1;
-  final Offset p2;
-
-  final Color color;
-
-  _MyLinePainter(this.p1, this.p2, this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    paint.strokeWidth = 5;
-    canvas.drawLine(p1, p2, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
-  }
-}
-
 class PipelineWidget extends StatelessObserverWidget {
   final Edge? edge;
   final Node? node;
@@ -53,6 +32,7 @@ class PipelineWidget extends StatelessObserverWidget {
   @override
   Widget build(BuildContext context) {
     final stateStore = EditorState.of(context);
+    final heatState = ToolsState.of(context).heatMapState;
     if (node != null) {
       const double dragPointSize = 10.0;
       return Positioned(
@@ -120,7 +100,7 @@ class PipelineWidget extends StatelessObserverWidget {
       final height = containerPoints.map((offset) => offset.dy).reduce(max) -
           containerPoints.map((offset) => offset.dy).reduce(min);
 
-      final Color pipeColor = switch (ToolsState.of(context).heatMapState) {
+      final Color pipeColor = switch (heatState) {
         null => basePipeColor,
         HeatMapState.temperature => (stateStore.maxFlow != null &&
                 edge.flow.isFinite &&

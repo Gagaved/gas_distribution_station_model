@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gas_distribution_station_model/data/util/FileManager.dart';
 import 'package:gas_distribution_station_model/models/pipeline_element_type.dart';
 import 'package:mobx/mobx.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/gas_network.dart';
 
@@ -12,13 +12,12 @@ class EditorStateStore = EditorState with _$EditorStateStore;
 
 abstract class EditorState with Store {
   static EditorState of(BuildContext context) =>
-      context.read<EditorStateStore>();
+      context.get<EditorStateStore>();
 
   void init() {
     var nodes = [
       Node(
           type: NodeType.source,
-          calculationType: NodeCalculationType.pressure,
           pressure: 3000000.0,
           position:
               const Offset(50, 100)), // P0, источник с постоянным давлением
@@ -28,7 +27,6 @@ abstract class EditorState with Store {
       Node(position: const Offset(450, 100)), // P3
       Node(
           type: NodeType.sink,
-          calculationType: NodeCalculationType.flow,
           pressure: 100000,
           sinkFlow: 2,
           position: const Offset(550, 100)) // P4, сток с максимальным расходом
@@ -301,6 +299,14 @@ abstract class EditorState with Store {
       _graph.removeLoopEdges();
       selectedElementIds.clear();
       updateEdgesAndNodesState();
+      maxFlow = 0;
+      maxTemperature = 0;
+      maxPressure = 0;
+      for (var e in edges) {
+        if (maxFlow! < e.flow) maxFlow = e.flow;
+        if (maxTemperature! < e.temperature) maxTemperature = e.temperature;
+        if (maxPressure! < e.pressure) maxPressure = e.pressure;
+      }
     }
   }
 
@@ -370,4 +376,9 @@ enum ToolType {
 enum CalculateStatus {
   complete,
   process,
+}
+
+extension ProviderContextExt on BuildContext {
+  T get<T>() => Provider.of<T>(this, listen: false);
+  T watch<T>() => Provider.of<T>(this);
 }

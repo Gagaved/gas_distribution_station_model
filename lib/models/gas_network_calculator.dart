@@ -50,9 +50,7 @@ class GasNetworkCalculator {
       molarMass: molarMass,
     );
     for (var node in nodesMap.values) {
-      if (node.node.type != NodeType.source ||
-          (node.node.type == NodeType.sink &&
-              node.node.calculationType == NodeCalculationType.flow)) {
+      if (node.node.type != NodeType.source) {
         node.node.pressure = 101000;
       }
     }
@@ -62,11 +60,6 @@ class GasNetworkCalculator {
         if (node.node.type != NodeType.base) {
           continue;
         }
-
-        // var incomingEdges =
-        //     edges.where((edge) => edge.endNodeId == node.id).toList();
-        // var outgoingEdges =
-        //     edges.where((edge) => edge.startNodeId == node.id).toList();
 
         double prevPressure = node.node.pressure;
 
@@ -105,7 +98,7 @@ class GasNetworkCalculator {
 
       // Обновляем давление в точке стока
       for (var node in nodesMap.values) {
-        if (node.node.calculationType == NodeCalculationType.flow) {
+        if (node.node.type == NodeType.sink && node.node.sinkFlow != 0) {
           _adjustPressureNodePressure(node);
         }
         if (node.node.type != NodeType.source) {
@@ -125,7 +118,7 @@ class GasNetworkCalculator {
       print('Converged after $innerIteration iterations.');
       for (var node in nodesMap.values) {
         print(
-            'Final ${node.node.calculationType == NodeType.sink ? 'SINK' : ''} P${node.node.id} = ${node.node.pressure}, T = ${node.node.temperature}');
+            'Final ${node.node.type == NodeType.sink ? 'SINK' : ''} P${node.node.id} = ${node.node.pressure}, T = ${node.node.temperature}');
       }
       for (var edge in edgesMap.values) {
         print(
@@ -211,7 +204,7 @@ class GasNetworkCalculator {
 
   void _adjustPressureNodePressure(OptimizeNode node) {
     // Проверяем, что переданная точка является точкой стока
-    if (node.node.calculationType != NodeCalculationType.flow) {
+    if (node.node.type != NodeType.sink) {
       throw ArgumentError('The provided node is not a sink node.');
     }
 
@@ -225,10 +218,9 @@ class GasNetworkCalculator {
     // Вычисляем коэффициент недостающего потока
     double overFlow = (totalFlow - node.node.sinkFlow);
     final additionalPressure = overFlow / node.node.sinkFlow * 10;
-    if (kDebugMode) {
-      print('additionalPressure $additionalPressure');
-    }
-
+    // if (kDebugMode) {
+    //   print('additionalPressure $additionalPressure');
+    // }
     // Увеличиваем давление в точке
     node.node.pressure += additionalPressure;
   }
@@ -267,13 +259,16 @@ class GasNetworkCalculator {
   }
 
   double _calculateConductance(double diameter, double length, double roughness,
-      double velocity, double viscosity, double density) {
+      double velocity, double viscosity, double density, Edge edge) {
+    ;
     double frictionFactor = calculateFrictionFactor(
         diameter: diameter,
         roughness: roughness,
         velocity: velocity,
-        viscosity: viscosity);
+        viscosity: viscosity,
+        frictionFactor: edge._frictionFactor ?? 0.02);
     double area = pi * pow(diameter, 2) / 4.0;
+    edge._frictionFactor = frictionFactor;
     double conductance =
         area * sqrt(2.0 / (frictionFactor * (length / diameter) * density));
     return conductance;
@@ -296,7 +291,7 @@ class GasNetworkCalculator {
       );
 
       double baseConductance = _calculateConductance(edge.diameter, edge.length,
-          edge.roughness, velocity, viscosity, density);
+          edge.roughness, velocity, viscosity, density, edge);
 
       if (edge.type == EdgeType.valve ||
           edge.type == EdgeType.percentageValve) {
@@ -319,10 +314,10 @@ class GasNetworkCalculator {
                   (endNode.pressure / edge.reducerTargetPressure);
 
           // Вычисляем разницу между текущим и целевым коэффициентом проводимости
-          if (kDebugMode) {
-            print(
-                "cal:${targetConductanceCoefficient - edge.reducerConductanceCoefficient}");
-          }
+          // if (kDebugMode) {
+          //   print(
+          //       "cal:${targetConductanceCoefficient - edge.reducerConductanceCoefficient}");
+          // }
           final conductanceDifference =
               targetConductanceCoefficient - edge.reducerConductanceCoefficient;
 
@@ -331,13 +326,13 @@ class GasNetworkCalculator {
               adjustmentFactor * conductanceDifference;
           if (kDebugMode) {
             //Ограничиваем минимальную величину корректировки
-            if (edge.reducerConductanceCoefficient.abs() < minAdjustment) {
-              //edge.reducerConductanceCoefficient = minAdjustment;
-              print('WARN');
-            }
+            // if (edge.reducerConductanceCoefficient.abs() < minAdjustment) {
+            //   //edge.reducerConductanceCoefficient = minAdjustment;
+            //   print('WARN');
+            // }
 
-            print(
-                'Updated reducerConductanceCoefficient: ${edge.reducerConductanceCoefficient}');
+            // print(
+            //     'Updated reducerConductanceCoefficient: ${edge.reducerConductanceCoefficient}');
           }
         }
         edge._conductance =

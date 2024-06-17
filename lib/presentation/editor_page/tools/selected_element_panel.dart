@@ -150,169 +150,123 @@ class _NodeEditingFieldsState extends State<_NodeEditingFields> {
           },
         ),
         const SizedBox(height: 10),
-        if (node.type != NodeType.base)
-          Column(
-            children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  setState(() {
-                    node.calculationType = NodeCalculationType.flow;
-                  });
-                },
-                child: AbsorbPointer(
-                  absorbing:
-                      node.calculationType == NodeCalculationType.pressure,
-                  child: Opacity(
-                    opacity: node.calculationType == NodeCalculationType.flow
-                        ? 1
-                        : 0.2,
-                    child: SizedBox(
-                      width: 200,
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _sinkFlowController,
-                                  keyboardType: TextInputType.number,
-                                  onSubmitted: (value) {
-                                    try {
-                                      final formatedString = value
-                                          .replaceAllMapped(',', (f) => '.');
-                                      node.sinkFlow =
-                                          double.parse(formatedString) /
-                                              ((sinkFlowMeasure ==
-                                                      SinkFlowMeasure.perHour)
-                                                  ? 3600
-                                                  : 1);
-                                      print(
-                                          'set target sink flow to ${node.sinkFlow}');
-                                      _sinkFlowController.text = formatedString;
-                                    } catch (e) {
-                                      node.sinkFlow = 0;
-                                      _sinkFlowController.value =
-                                          const TextEditingValue(text: '0');
-                                    }
-                                  },
-                                  decoration: InputDecoration(
-                                    labelText:
-                                        'Расход, ${sinkFlowMeasure == SinkFlowMeasure.perSec ? 'М^3/c' : 'М^3/ч'}',
-                                    border: const OutlineInputBorder(),
-                                  ),
-                                ),
-                              ),
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Flexible(
-                                      child: Text(
-                                          'в М^3/${sinkFlowMeasure == SinkFlowMeasure.perHour ? 'ч' : 'c'}')),
-                                  Transform.scale(
-                                    scale: 0.7,
-                                    child: Switch(
-                                      value: sinkFlowMeasure ==
-                                          SinkFlowMeasure.perHour,
-                                      onChanged: (bool value) {
-                                        setState(() {
-                                          value
-                                              ? sinkFlowMeasure =
-                                                  SinkFlowMeasure.perHour
-                                              : sinkFlowMeasure =
-                                                  SinkFlowMeasure.perSec;
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              )
-                            ],
-                          ),
-                        ],
+        if (node.type == NodeType.sink)
+          SizedBox(
+            width: 200,
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _sinkFlowController,
+                        keyboardType: TextInputType.number,
+                        onSubmitted: (value) {
+                          try {
+                            final formatedString =
+                                value.replaceAllMapped(',', (f) => '.');
+                            node.sinkFlow = double.parse(formatedString) /
+                                ((sinkFlowMeasure == SinkFlowMeasure.perHour)
+                                    ? 3600
+                                    : 1);
+                            print('set target sink flow to ${node.sinkFlow}');
+                            _sinkFlowController.text = formatedString;
+                          } catch (e) {
+                            node.sinkFlow = 0;
+                            _sinkFlowController.value =
+                                const TextEditingValue(text: '0');
+                          }
+                        },
+                        decoration: InputDecoration(
+                          labelText:
+                              'Расход, ${sinkFlowMeasure == SinkFlowMeasure.perSec ? 'М^3/c' : 'М^3/ч'}',
+                          border: const OutlineInputBorder(),
+                        ),
                       ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                            child: Text(
+                                'в М^3/${sinkFlowMeasure == SinkFlowMeasure.perHour ? 'ч' : 'c'}')),
+                        Transform.scale(
+                          scale: 0.7,
+                          child: Switch(
+                            value: sinkFlowMeasure == SinkFlowMeasure.perHour,
+                            onChanged: (bool value) {
+                              setState(() {
+                                value
+                                    ? sinkFlowMeasure = SinkFlowMeasure.perHour
+                                    : sinkFlowMeasure = SinkFlowMeasure.perSec;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ],
+            ),
+          ),
+        if (node.type == NodeType.source)
+          SizedBox(
+            width: 200,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    onTap: () {},
+                    controller: _pressureController,
+                    keyboardType: TextInputType.number,
+                    onSubmitted: (value) {
+                      try {
+                        final formatedString =
+                            value.replaceAllMapped(',', (f) => '.');
+                        node.pressure = double.parse(formatedString) *
+                            ((pressureMeasure == PressureMeasure.PA)
+                                ? 1
+                                : 1e+6);
+                        print('set target preassure to ${node.pressure}');
+                        _pressureController.text = formatedString;
+                      } catch (e) {
+                        node.sinkFlow = 0;
+                        _pressureController.value =
+                            const TextEditingValue(text: '0');
+                      }
+                    },
+                    decoration: InputDecoration(
+                      labelText:
+                          'Давление, ${pressureMeasure == PressureMeasure.PA ? 'Па' : 'МПА'}',
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
-              ),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  setState(() {
-                    node.calculationType = NodeCalculationType.pressure;
-                  });
-                },
-                child: AbsorbPointer(
-                  absorbing: node.calculationType == NodeCalculationType.flow,
-                  child: Opacity(
-                    opacity: node.calculationType != NodeCalculationType.flow
-                        ? 1
-                        : 0.2,
-                    child: SizedBox(
-                      width: 200,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              onTap: () {},
-                              controller: _pressureController,
-                              keyboardType: TextInputType.number,
-                              onSubmitted: (value) {
-                                try {
-                                  final formatedString =
-                                      value.replaceAllMapped(',', (f) => '.');
-                                  node.pressure = double.parse(formatedString) *
-                                      ((pressureMeasure == PressureMeasure.PA)
-                                          ? 1
-                                          : 1e+6);
-                                  print(
-                                      'set target preassure to ${node.pressure}');
-                                  _pressureController.text = formatedString;
-                                } catch (e) {
-                                  node.sinkFlow = 0;
-                                  _pressureController.value =
-                                      const TextEditingValue(text: '0');
-                                }
-                              },
-                              decoration: InputDecoration(
-                                labelText:
-                                    'Давление, ${pressureMeasure == PressureMeasure.PA ? 'Па' : 'МПА'}',
-                                border: const OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                  child: Text(
-                                      pressureMeasure == PressureMeasure.PA
-                                          ? 'в Па'
-                                          : 'в МПа')),
-                              Transform.scale(
-                                scale: 0.7,
-                                child: Switch(
-                                  value: pressureMeasure == PressureMeasure.MPA,
-                                  onChanged: (bool value) {
-                                    setState(() {
-                                      value
-                                          ? pressureMeasure =
-                                              PressureMeasure.MPA
-                                          : pressureMeasure =
-                                              PressureMeasure.PA;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ],
-                          )
-                        ],
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                        child: Text(pressureMeasure == PressureMeasure.PA
+                            ? 'в Па'
+                            : 'в МПа')),
+                    Transform.scale(
+                      scale: 0.7,
+                      child: Switch(
+                        value: pressureMeasure == PressureMeasure.MPA,
+                        onChanged: (bool value) {
+                          setState(() {
+                            value
+                                ? pressureMeasure = PressureMeasure.MPA
+                                : pressureMeasure = PressureMeasure.PA;
+                          });
+                        },
                       ),
                     ),
-                  ),
-                ),
-              ),
-            ],
+                  ],
+                )
+              ],
+            ),
           ),
       ],
     ));
@@ -761,6 +715,7 @@ class _EdgeInformationFields extends StatelessObserverWidget {
           Text('Поток: ${edge.flowPerHour.abs().toStringAsFixed(1)} М^3/ч'),
           Text(
               'Температура: ${(edge.temperature - 273.15).toStringAsFixed(1)} °C'),
+          Text('Давление: ${(edge.pressure).toStringAsFixed(1)} Па'),
           Text(
             edge.isAdorize ? 'Адоризирован' : 'не адоризирован',
             style: TextStyle(color: edge.isAdorize ? Colors.green : Colors.red),
@@ -791,7 +746,7 @@ class _NodeInformationFields extends StatelessObserverWidget {
         title: 'Результаты расчета',
         child: Column(
           children: [
-            Text('Давление Па: ${node.pressure}'),
+            Text('Давление: ${node.pressure.toStringAsFixed(0)} Па'),
             Text(
                 'Температура: ${(node.temperature - 273.15).toStringAsFixed(1)} °C'),
             GestureDetector(
