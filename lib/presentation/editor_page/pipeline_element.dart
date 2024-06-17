@@ -33,7 +33,7 @@ class _MyLinePainter extends CustomPainter {
   }
 }
 
-class PipelineWidget extends StatelessWidget {
+class PipelineWidget extends StatelessObserverWidget {
   final Edge? edge;
   final Node? node;
   final bool isSelect;
@@ -119,12 +119,46 @@ class PipelineWidget extends StatelessWidget {
           containerPoints.map((offset) => offset.dx).reduce(min);
       final height = containerPoints.map((offset) => offset.dy).reduce(max) -
           containerPoints.map((offset) => offset.dy).reduce(min);
-      final Color pipeColor = (edge.flow.abs() > 0.001 &&
-              stateStore.maxFlow != null &&
-              stateStore.maxFlow != 0)
-          ? Color.lerp(basePipeColor, Colors.blueAccent,
-              edge.flow.abs() / stateStore.maxFlow!)!
-          : basePipeColor;
+
+      final Color pipeColor = switch (ToolsState.of(context).heatMapState) {
+        null => basePipeColor,
+        HeatMapState.temperature => (stateStore.maxFlow != null &&
+                edge.flow.isFinite &&
+                edge.flow.abs() > 0.1 &&
+                edge.temperature.isFinite &&
+                stateStore.maxTemperature != null &&
+                stateStore.maxTemperature != 0 &&
+                stateStore.maxTemperature!.isFinite)
+            ? Color.lerp(Colors.blueAccent, Colors.red,
+                min(1, max(0, (edge.temperature - 273.15) / 80)))!
+            : basePipeColor,
+        HeatMapState.pressure => (stateStore.maxFlow != null &&
+                edge.flow.isFinite &&
+                edge.flow.abs() > 0.1 &&
+                edge.pressure.isFinite &&
+                stateStore.maxPressure != null &&
+                stateStore.maxPressure != 0 &&
+                stateStore.maxPressure!.isFinite)
+            ? Color.lerp(basePipeColor, Colors.deepOrange,
+                min(1, max(0, edge.pressure / stateStore.maxPressure!)))!
+            : basePipeColor,
+        HeatMapState.flow => (stateStore.maxFlow != null &&
+                edge.flow.isFinite &&
+                edge.flow.abs() > 0.01 &&
+                stateStore.maxFlow!.isFinite)
+            ? Color.lerp(basePipeColor, Colors.blueAccent,
+                min(1, max(0, edge.flow.abs() / stateStore.maxFlow!)))!
+            : basePipeColor,
+        // TODO: Handle this case.
+        HeatMapState.adorization => (stateStore.maxFlow != null &&
+                edge.flow.isFinite &&
+                edge.flow.abs() > 0.1 &&
+                edge.pressure.isFinite &&
+                edge.isAdorize)
+            ? Colors.green
+            : basePipeColor,
+      };
+
       final Color statusColor = switch (edge.type) {
         EdgeType.segment => basePipeColor,
         EdgeType.valve =>

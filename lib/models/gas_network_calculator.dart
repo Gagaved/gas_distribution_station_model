@@ -50,7 +50,9 @@ class GasNetworkCalculator {
       molarMass: molarMass,
     );
     for (var node in nodesMap.values) {
-      if (node.node.calculationType == NodeCalculationType.flow) {
+      if (node.node.type != NodeType.source ||
+          (node.node.type == NodeType.sink &&
+              node.node.calculationType == NodeCalculationType.flow)) {
         node.node.pressure = 101000;
       }
     }
@@ -84,7 +86,7 @@ class GasNetworkCalculator {
           denominator += edge.conductance;
         }
 
-        if (denominator > 0) {
+        if (denominator > 0 && denominator.isFinite && numerator.isFinite) {
           node.node.pressure = numerator / denominator;
         }
 
@@ -107,7 +109,8 @@ class GasNetworkCalculator {
           _adjustPressureNodePressure(node);
         }
         if (node.node.type != NodeType.source) {
-          node.node.temperature = _calculateNodeTemperature(node);
+          final newNodeTemp = _calculateNodeTemperature(node);
+          node.node.temperature = newNodeTemp;
         }
       }
 
@@ -131,6 +134,7 @@ class GasNetworkCalculator {
       print('Final iterations $innerIteration');
     }
     _adorize();
+    _addPressureToEdges();
     return (
       nodesMap.values.map((e) => e.node).toList(),
       edgesMap.values.toList()
@@ -164,12 +168,14 @@ class GasNetworkCalculator {
               1e-5; // Примерный коэффициент
     }
     result -= temperatureDrop;
-    if (edge.type == EdgeType.heater && edge.heaterOn) {
+    if (edge.type == EdgeType.heater &&
+        edge.heaterOn &&
+        edge.flow.isFinite &&
+        edge.flow != 0) {
       double heaterTemperatureIncrease = edge.heaterPower *
           edge.heaterEfficiency /
           (edge.flow.abs() * specificHeat);
       result += heaterTemperatureIncrease;
-      print('result for heater $result');
     }
     return result;
   }
@@ -195,7 +201,7 @@ class GasNetworkCalculator {
     for (var edge in connectedEdges) {
       numerator += edge.flow.abs() * edge.temperature;
     }
-    if (denominator != 0) {
+    if (denominator != 0 && denominator.isFinite && denominator.isFinite) {
       final result = numerator / denominator;
       return result;
     } else {
@@ -355,8 +361,9 @@ class GasNetworkCalculator {
           .toList();
       for (final edge in connectedEdges) {
         edge.isAdorize = true;
-        if (nodeId != edge.startNodeId) visit(edge.startNodeId);
-        if (nodeId != edge.endNodeId) visit(edge.endNodeId);
+        if (edge.flow != 0) {
+          visit(edge.flowEndNodeId);
+        }
       }
     }
 
@@ -364,6 +371,12 @@ class GasNetworkCalculator {
         edge.type == EdgeType.adorizer && edge.flow != 0 && edge.adorizerOn)) {
       edge.isAdorize = true;
       visit(edge.flowEndNodeId);
+    }
+  }
+
+  _addPressureToEdges() {
+    for (final edge in edgesMap.values) {
+      edge._pressure = nodesMap[edge.flowEndNodeId]!.node.pressure;
     }
   }
 }

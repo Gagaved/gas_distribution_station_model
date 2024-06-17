@@ -19,6 +19,7 @@ class SideToolsMenuWidget extends StatelessWidget {
             Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
                   padding: const EdgeInsets.all(3.0),
@@ -80,29 +81,34 @@ class SideToolsMenuWidget extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(3.0),
-              child: MaterialButton(
-                onPressed: () {
-                  ToolsState.of(context).calculationToolVisible =
-                      !ToolsState.of(context).calculationToolVisible;
-                },
-                child: const Row(
-                  children: [
-                    Icon(Icons.calculate),
-                    Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text("Расчет"),
+                Padding(
+                  padding: const EdgeInsets.all(3.0),
+                  child: MaterialButton(
+                    onPressed: () {
+                      ToolsState.of(context).calculationToolVisible =
+                          !ToolsState.of(context).calculationToolVisible;
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Icon(Icons.calculate),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text("Расчет"),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
             const _PipelinePanelWidget()
           ]),
         ),
+        Container(
+          width: 1,
+          color: Colors.black12,
+        )
       ],
     );
   }
@@ -153,7 +159,7 @@ class _PipelinePanelWidget extends StatelessWidget {
               })),
             );
           },
-        )
+        ),
       ],
     );
   }

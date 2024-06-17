@@ -90,7 +90,10 @@ abstract class EditorState with Store {
 
   @observable
   double? maxFlow;
-
+  @observable
+  double? maxTemperature;
+  @observable
+  double? maxPressure;
   @observable
   Map<Offset, List<Node>> magneticGrid = {};
 
@@ -146,7 +149,7 @@ abstract class EditorState with Store {
   Future<void> calculateGasNetwork() async {
     calculateStatus = CalculateStatus.process;
     final start = DateTime.now();
-    maxFlow = null;
+
     try {
       await _graph.calculateGasNetwork(
         epsilon: epsilon,
@@ -156,7 +159,16 @@ abstract class EditorState with Store {
         universalGasConstant: universalGasConstant,
         specificHeat: specificHeat,
       );
+
       updateEdgesAndNodesState();
+      maxFlow = 0;
+      maxTemperature = 0;
+      maxPressure = 0;
+      for (var e in edges) {
+        if (maxFlow! < e.flow) maxFlow = e.flow;
+        if (maxTemperature! < e.temperature) maxTemperature = e.temperature;
+        if (maxPressure! < e.pressure) maxPressure = e.pressure;
+      }
       edges.sort((f, s) => f.flow.abs() < s.flow.abs() ? 1 : 0);
       maxFlow = edges.firstOrNull?.flow.abs();
     } on Exception catch (e) {

@@ -198,6 +198,11 @@ class Edge extends GraphElement with EdgeMappable {
 
   double get reducerConductanceCoefficient => _reducerConductanceCoefficient;
 
+  double _pressure;
+
+  ///только для информации, не учавствует в расчетах.
+  double get pressure => _pressure;
+
   set reducerConductanceCoefficient(double value) {
     _reducerConductanceCoefficient = max(min(1, value), 0);
   }
@@ -230,8 +235,10 @@ class Edge extends GraphElement with EdgeMappable {
     this.flow = 0,
     this.isAdorize = false,
     this.adorizerOn = false,
+    double pressure = 0,
   })  : _conductance = 0.0,
-        _percentageValve = percentageValve ?? 0;
+        _percentageValve = percentageValve ?? 0,
+        _pressure = pressure;
 }
 
 @MappableEnum()
