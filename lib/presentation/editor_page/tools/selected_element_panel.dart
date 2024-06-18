@@ -656,7 +656,7 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
           Padding(
             padding: const EdgeInsets.only(top: 5.0),
             child: AppCard(
-              title: 'Адоризатор',
+              title: 'Одоризатор',
               child: Builder(builder: (context) {
                 return MaterialButton(
                     onPressed: () {
@@ -667,8 +667,8 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
                     },
                     color: edge.adorizerOn ? Colors.green : Colors.red,
                     child: Text(edge.adorizerOn
-                        ? 'Арозирация вкл'
-                        : 'Адоризация выкл'));
+                        ? 'Орозирация вкл'
+                        : 'Одоризация выкл'));
               }),
             ),
           ),
@@ -751,7 +751,7 @@ class _EdgeInformationFields extends StatelessObserverWidget {
           Text('Давление: ${(edge.pressure).toStringAsFixed(1)} Па'),
           Text('Кондуктивность: ${edge.conductance}'),
           Text(
-            edge.isAdorize ? 'Адоризирован' : 'не адоризирован',
+            edge.isAdorize ? 'Одоризирован' : 'не одоризирован',
             style: TextStyle(color: edge.isAdorize ? Colors.green : Colors.red),
           ),
           // GestureDetector(

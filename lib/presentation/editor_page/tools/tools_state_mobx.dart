@@ -10,7 +10,7 @@ enum HeatMapState {
   temperature('Температура'),
   pressure('Давление'),
   flow('Расход'),
-  adorization('Адоризация');
+  adorization('Одоризация');
 
   const HeatMapState(this.value);
 

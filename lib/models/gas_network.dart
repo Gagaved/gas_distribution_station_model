@@ -138,7 +138,7 @@ final class GasNetwork with GasNetworkMappable {
 }
 
 @MappableClass()
-sealed class GraphElement {
+sealed class GraphElement with GraphElementMappable {
   static const Uuid _uuid = Uuid();
   final String id;
 

@@ -8,7 +8,7 @@ enum EdgeType {
   valve('Кран'),
   percentageValve('Регулируемый кран'),
   heater('Нагреватель'),
-  adorizer('Адоризатор'),
+  adorizer('Одоризатор'),
   meter('Счетчик'),
   reducer('Регулятор давления'),
   filter('Фильтр');
