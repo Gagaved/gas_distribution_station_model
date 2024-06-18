@@ -167,7 +167,6 @@ abstract class EditorState with Store {
         if (maxTemperature! < e.temperature) maxTemperature = e.temperature;
         if (maxPressure! < e.pressure) maxPressure = e.pressure;
       }
-      edges.sort((f, s) => f.flow.abs() < s.flow.abs() ? 1 : 0);
       maxFlow = edges.firstOrNull?.flow.abs();
     } on Exception catch (e) {
       print(e);
@@ -192,7 +191,7 @@ abstract class EditorState with Store {
         lastCreatedNodeForEdgeTool = element;
         _lastCreatedNodeIdForEdgeTool = element.id;
       } else {
-        _graph.link(_lastCreatedNodeIdForEdgeTool!, element.id, 0.1, 5, 0.0001);
+        _graph.link(_lastCreatedNodeIdForEdgeTool!, element.id, 0.2, 5, 0.0001);
         _lastCreatedNodeIdForEdgeTool = null;
         lastCreatedNodeForEdgeTool = null;
       }
@@ -323,20 +322,13 @@ abstract class EditorState with Store {
           (point.position.dy - otherPoint.position.dy).abs() <= magneticRange) {
         point.position = otherPoint.position;
         _graph.mergePoints(point, otherPoint);
+        _graph.removeLoopEdges();
         updateEdgesAndNodesState();
         return otherPoint;
       }
     }
     updateEdgesAndNodesState();
     return null;
-  }
-
-  Edge _addNewEdge(double diam) {
-    var p1 = _graph.addNode(const Offset(300, 300));
-    var p2 = _graph.addNode(const Offset(300, 400));
-    final newEdge = _graph.link(p1.id, p2.id, diam, 5, 0.0001);
-    updateEdgesAndNodesState();
-    return newEdge;
   }
 
   bool deleteElement(GraphElement graphElement) {

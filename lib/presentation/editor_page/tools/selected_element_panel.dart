@@ -388,103 +388,136 @@ class _EdgeEditingFieldsState extends State<_EdgeEditingFields> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 10),
-              SizedBox(
-                width: 150,
-                child: Builder(builder: (context) {
-                  void save() {
-                    try {
-                      final value = _lenController.text;
-                      final formatedString =
-                          value.replaceAllMapped(',', (f) => '.');
-                      edge.length = double.parse(formatedString);
-                      print('set len to ${edge.length}');
-                      _lenController.text = formatedString;
-                      _edgeLenFocusNode.parent?.requestFocus();
-                    } catch (e) {
-                      edge.length = 0;
-                      _lenController.value = const TextEditingValue(text: '0');
-                    }
-                  }
+              AbsorbPointer(
+                absorbing: edge.withoutConductance,
+                child: Opacity(
+                  opacity: edge.withoutConductance ? 0.3 : 1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: 150,
+                        child: Builder(builder: (context) {
+                          void save() {
+                            try {
+                              final value = _lenController.text;
+                              final formatedString =
+                                  value.replaceAllMapped(',', (f) => '.');
+                              edge.length = double.parse(formatedString);
+                              print('set len to ${edge.length}');
+                              _lenController.text = formatedString;
+                              _edgeLenFocusNode.parent?.requestFocus();
+                            } catch (e) {
+                              edge.length = 0;
+                              _lenController.value =
+                                  const TextEditingValue(text: '0');
+                            }
+                          }
 
-                  return TextField(
-                    focusNode: _edgeLenFocusNode,
-                    controller: _lenController,
-                    keyboardType: TextInputType.number,
-                    onTapOutside: (_) => save(),
-                    onEditingComplete: () => save(),
-                    decoration: const InputDecoration(
-                      labelText: 'Длина, м',
-                      border: OutlineInputBorder(),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: 150,
-                child: Builder(builder: (context) {
-                  void save() {
-                    try {
-                      final value = _diamController.text;
-                      final formatedString =
-                          value.replaceAllMapped(',', (f) => '.');
-                      edge.diameter = double.parse(formatedString);
-                      print('set diam to ${edge.diameter}');
-                      _diamController.text = formatedString;
-                      _edgeDiamFocusNode.parent?.requestFocus();
-                    } catch (e) {
-                      edge.diameter = 0;
-                      _diamController.value = const TextEditingValue(text: '0');
-                    }
-                  }
-
-                  return TextField(
-                    focusNode: _edgeDiamFocusNode,
-                    controller: _diamController,
-                    keyboardType: TextInputType.number,
-                    onTapOutside: (_) => save(),
-                    onEditingComplete: () => save(),
-                    decoration: const InputDecoration(
-                      labelText: 'Диаметр, м',
-                      border: OutlineInputBorder(),
-                    ),
-                  );
-                }),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 10.0),
-                child: SizedBox(
-                  width: 150,
-                  child: Builder(builder: (context) {
-                    void save() {
-                      try {
-                        final value = _roughnessController.text;
-                        final formatedString =
-                            value.replaceAllMapped(',', (f) => '.');
-                        edge.roughness = double.parse(formatedString);
-                        print('set roughness to ${edge.roughness}');
-                        _roughnessController.text = formatedString;
-                        _roughnessFocusNode.parent?.requestFocus();
-                      } catch (e) {
-                        //edge.roughness = 0.0001;
-                        _roughnessController.value =
-                            const TextEditingValue(text: '0');
-                      }
-                    }
-
-                    return TextField(
-                      focusNode: _roughnessFocusNode,
-                      controller: _roughnessController,
-                      keyboardType: TextInputType.number,
-                      onTapOutside: (_) => save(),
-                      onEditingComplete: () => save(),
-                      decoration: const InputDecoration(
-                        labelText: 'Шераховатость, мкм',
-                        border: OutlineInputBorder(),
+                          return TextField(
+                            focusNode: _edgeLenFocusNode,
+                            controller: _lenController,
+                            keyboardType: TextInputType.number,
+                            onTapOutside: (_) => save(),
+                            onEditingComplete: () => save(),
+                            decoration: const InputDecoration(
+                              labelText: 'Длина, м',
+                              border: OutlineInputBorder(),
+                            ),
+                          );
+                        }),
                       ),
-                    );
-                  }),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: 150,
+                        child: Builder(builder: (context) {
+                          void save() {
+                            try {
+                              final value = _diamController.text;
+                              final formatedString =
+                                  value.replaceAllMapped(',', (f) => '.');
+                              edge.diameter = double.parse(formatedString);
+                              print('set diam to ${edge.diameter}');
+                              _diamController.text = formatedString;
+                              _edgeDiamFocusNode.parent?.requestFocus();
+                            } catch (e) {
+                              edge.diameter = 0;
+                              _diamController.value =
+                                  const TextEditingValue(text: '0');
+                            }
+                          }
+
+                          return TextField(
+                            focusNode: _edgeDiamFocusNode,
+                            controller: _diamController,
+                            keyboardType: TextInputType.number,
+                            onTapOutside: (_) => save(),
+                            onEditingComplete: () => save(),
+                            decoration: const InputDecoration(
+                              labelText: 'Диаметр, м',
+                              border: OutlineInputBorder(),
+                            ),
+                          );
+                        }),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10.0),
+                        child: SizedBox(
+                          width: 150,
+                          child: Builder(builder: (context) {
+                            void save() {
+                              try {
+                                final value = _roughnessController.text;
+                                final formatedString =
+                                    value.replaceAllMapped(',', (f) => '.');
+                                edge.roughness = double.parse(formatedString);
+                                print('set roughness to ${edge.roughness}');
+                                _roughnessController.text = formatedString;
+                                _roughnessFocusNode.parent?.requestFocus();
+                              } catch (e) {
+                                //edge.roughness = 0.0001;
+                                _roughnessController.value =
+                                    const TextEditingValue(text: '0');
+                              }
+                            }
+
+                            return TextField(
+                              focusNode: _roughnessFocusNode,
+                              controller: _roughnessController,
+                              keyboardType: TextInputType.number,
+                              onTapOutside: (_) => save(),
+                              onEditingComplete: () => save(),
+                              decoration: const InputDecoration(
+                                labelText: 'Шераховатость, мкм',
+                                border: OutlineInputBorder(),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 150,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Checkbox(
+                          value: edge.withoutConductance,
+                          onChanged: (value) {
+                            setState(() {
+                              edge.withoutConductance = value ?? false;
+                            });
+                          }),
+                      const Text('Без сопротивления'),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -716,6 +749,7 @@ class _EdgeInformationFields extends StatelessObserverWidget {
           Text(
               'Температура: ${(edge.temperature - 273.15).toStringAsFixed(1)} °C'),
           Text('Давление: ${(edge.pressure).toStringAsFixed(1)} Па'),
+          Text('Кондуктивность: ${edge.conductance}'),
           Text(
             edge.isAdorize ? 'Адоризирован' : 'не адоризирован',
             style: TextStyle(color: edge.isAdorize ? Colors.green : Colors.red),

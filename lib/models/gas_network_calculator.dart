@@ -217,7 +217,7 @@ class GasNetworkCalculator {
 
     // Вычисляем коэффициент недостающего потока
     double overFlow = (totalFlow - node.node.sinkFlow);
-    final additionalPressure = overFlow / node.node.sinkFlow * 10;
+    final additionalPressure = overFlow / node.node.sinkFlow;
     // if (kDebugMode) {
     //   print('additionalPressure $additionalPressure');
     // }
@@ -260,7 +260,6 @@ class GasNetworkCalculator {
 
   double _calculateConductance(double diameter, double length, double roughness,
       double velocity, double viscosity, double density, Edge edge) {
-    ;
     double frictionFactor = calculateFrictionFactor(
         diameter: diameter,
         roughness: roughness,
@@ -336,7 +335,7 @@ class GasNetworkCalculator {
           }
         }
         edge._conductance =
-            baseConductance * pow(edge._reducerConductanceCoefficient, 2);
+            baseConductance * edge._reducerConductanceCoefficient;
       } else {
         edge._conductance = baseConductance;
       }

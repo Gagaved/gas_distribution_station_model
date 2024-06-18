@@ -163,8 +163,10 @@ class Edge extends GraphElement with EdgeMappable {
 
   double? _frictionFactor;
 
+  bool withoutConductance;
+
   /// Коэффициент проводимости для расчета потока газа через ребро
-  double get conductance => _conductance;
+  double get conductance => withoutConductance ? 1 : _conductance;
 
   /// Расход газа через ребро, вычисляется в процессе расчета
   double flow;
@@ -237,6 +239,7 @@ class Edge extends GraphElement with EdgeMappable {
     this.isAdorize = false,
     this.adorizerOn = false,
     double pressure = 0,
+    this.withoutConductance = false,
   })  : _conductance = 0.0,
         _percentageValve = percentageValve ?? 0,
         _pressure = pressure;
