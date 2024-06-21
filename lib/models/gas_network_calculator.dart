@@ -233,7 +233,9 @@ class GasNetworkCalculator {
     double frictionFactor = 0.02, // Initial guess for friction factor
   }) {
     double reynoldsNumber = (velocity * diameter) / viscosity;
-
+    if (reynoldsNumber <= 2300) {
+      frictionFactor = 64 / reynoldsNumber;
+    }
     // Iteratively solve Colebrook-White equation
     if (reynoldsNumber > 4000) {
       for (int i = 0; i < 10; i++) {
